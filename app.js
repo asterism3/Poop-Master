@@ -45,9 +45,9 @@ let allUsers = [];
 
 // Data Constants
 const poopTypes = {
-    1: { emoji: '🥜', label: 'Type 1', desc: 'Hard lumps', color: '#78350f' },
-    2: { emoji: '🌰', label: 'Type 2', desc: 'Lumpy sausage', color: '#92400e' },
-    3: { emoji: '🌭', label: 'Type 3', desc: 'Cracked surface', color: '#b45309' },
+    1: { emoji: '🍇', label: 'Type 1', desc: 'Hard lumps', color: '#78350f' },
+    2: { emoji: '🌽', label: 'Type 2', desc: 'Lumpy sausage', color: '#92400e' },
+    3: { emoji: '🥖', label: 'Type 3', desc: 'Cracked surface', color: '#b45309' },
     4: { emoji: '💩', label: 'Type 4', desc: 'Normal smooth', color: '#d97706' },
     5: { emoji: '🍦', label: 'Type 5', desc: 'Soft blobs', color: '#f59e0b' },
     6: { emoji: '☁️', label: 'Type 6', desc: 'Mushy', color: '#fbbf24' },
