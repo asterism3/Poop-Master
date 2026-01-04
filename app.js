@@ -41,7 +41,7 @@ let currentUser = null;
 let unsubscribeLogs = null;
 let unsubscribeNotifications = null;
 let localLogs = [];
-let allUsers = []; // Store all users for leaderboard
+let allUsers = [];
 
 // Data Constants
 const poopTypes = {
@@ -64,9 +64,9 @@ let lineChartInstance = null;
 let pieChartInstance = null;
 
 // ============================================
-// NEW: COOLDOWN SYSTEM
+// COOLDOWN SYSTEM
 // ============================================
-const COOLDOWN_DURATION = 5 * 60 * 1000; // 5 minutes
+const COOLDOWN_DURATION = 5 * 60 * 1000;
 let cooldownInterval = null;
 
 function getLastLogTime() {
@@ -95,32 +95,23 @@ function formatTime(ms) {
 
 function updateCooldownUI() {
     const logBtn = document.getElementById('logBtn');
-    
-    // Attempt to find inner elements (if you have them), otherwise use button
     const logBtnText = document.getElementById('logBtnText'); 
     const logBtnIcon = document.getElementById('logBtnIcon');
-    
     const remaining = getRemainingCooldown();
     
     if (remaining > 0) {
         logBtn.disabled = true;
         const timeText = `Wait ${formatTime(remaining)}`;
-        
-        // Handle UI update safely whether you have spans or just text
         if(logBtnText) logBtnText.textContent = timeText;
         else logBtn.textContent = timeText;
-        
         if(logBtnIcon) logBtnIcon.classList.add('hidden');
-        logBtn.classList.add('animate-pulse', 'bg-gray-400', 'cursor-not-allowed'); // Add styling
+        logBtn.classList.add('animate-pulse', 'bg-gray-400', 'cursor-not-allowed');
     } else {
         logBtn.disabled = false;
-        
         if(logBtnText) logBtnText.textContent = 'LOG IT!';
         else logBtn.textContent = 'LOG IT!';
-        
         if(logBtnIcon) logBtnIcon.classList.remove('hidden');
         logBtn.classList.remove('animate-pulse', 'bg-gray-400', 'cursor-not-allowed');
-        
         if (cooldownInterval) {
             clearInterval(cooldownInterval);
             cooldownInterval = null;
@@ -131,7 +122,6 @@ function updateCooldownUI() {
 function startCooldownTimer() {
     updateCooldownUI();
     if (cooldownInterval) clearInterval(cooldownInterval);
-    
     cooldownInterval = setInterval(() => {
         const remaining = getRemainingCooldown();
         if (remaining <= 0) {
@@ -147,13 +137,10 @@ function initCooldown() {
     if (remaining > 0) startCooldownTimer();
 }
 
-// Reuse your existing toast style, or add this helper
 function showToast(message) {
     const t = document.getElementById('toast');
-    // If you have a span inside the toast for text:
     const textSpan = t.querySelector('span'); 
     if(textSpan) textSpan.textContent = message;
-    
     t.classList.remove('opacity-0', 'translate-y-4');
     setTimeout(() => t.classList.add('opacity-0', 'translate-y-4'), 3000);
 }
@@ -196,7 +183,6 @@ async function createOrUpdateUserProfile(user) {
     };
     
     if (!userSnap.exists()) {
-        // New user - create profile with initial stats
         await setDoc(userRef, {
             ...userData,
             createdAt: serverTimestamp(),
@@ -216,7 +202,6 @@ async function createOrUpdateUserProfile(user) {
             }
         });
     } else {
-        // Existing user - just update last active
         await updateDoc(userRef, userData);
     }
 }
@@ -229,14 +214,12 @@ async function updateUserStats(uid) {
     const now = new Date();
     const today = now.toDateString();
     
-    // Get current user data
     const userSnap = await getDoc(userRef);
     if (!userSnap.exists()) return;
     
     const userData = userSnap.data();
     const lastLogDate = userData.stats?.lastLogDate?.toDate?.()?.toDateString?.() || null;
     
-    // Calculate if we need to reset daily count
     const todayLogs = lastLogDate === today 
         ? (userData.stats?.todayLogs || 0) + 1 
         : 1;
@@ -255,11 +238,8 @@ async function updateUserStats(uid) {
 onAuthStateChanged(auth, async (user) => {
     if (user) {
         currentUser = user;
-        
-        // Create/update user profile in Firestore (PUBLIC PROFILE)
         await createOrUpdateUserProfile(user);
         
-        // UI Updates
         document.getElementById('loginSection').classList.add('hidden');
         document.getElementById('guestSection').classList.add('hidden');
         document.getElementById('userSection').classList.remove('hidden');
@@ -269,7 +249,9 @@ onAuthStateChanged(auth, async (user) => {
         document.getElementById('loginModal').classList.add('hidden');
         document.getElementById('loginModal').classList.remove('flex');
         
-        // Start Listeners
+        // Update side panel user info
+        if (typeof updateSidePanelUser === 'function') updateSidePanelUser();
+        
         setupRealtimeListener(user.uid);
         setupNotificationListener(user.uid);
         fetchAllUsersForLeaderboard();
@@ -328,7 +310,6 @@ function setupNotificationListener(uid) {
     });
 }
 
-// Send a notification to another user
 async function sendNotification(toUid, type, message, emoji) {
     if (!currentUser || toUid === currentUser.uid) return;
     
@@ -337,7 +318,7 @@ async function sendNotification(toUid, type, message, emoji) {
         fromUid: currentUser.uid,
         fromName: currentUser.displayName,
         fromAvatar: currentUser.photoURL,
-        type: type,  // 'reminder', 'reaction', 'comment'
+        type: type,
         message: message,
         emoji: emoji,
         unread: true,
@@ -398,17 +379,14 @@ async function addReaction(targetUserId, emoji) {
     }
     
     if (targetUserId === currentUser.uid) {
-        // Can't react to yourself? Or allow it - your choice
         return;
     }
     
-    // Update the target user's reaction count
     const userRef = doc(db, "users", targetUserId);
     await updateDoc(userRef, {
         [`reactions.${emoji}`]: increment(1)
     });
     
-    // Create a reaction record (for tracking who reacted)
     await addDoc(collection(db, "reactions"), {
         toUid: targetUserId,
         fromUid: currentUser.uid,
@@ -416,11 +394,9 @@ async function addReaction(targetUserId, emoji) {
         createdAt: serverTimestamp()
     });
     
-    // Send notification to the user
     await sendNotification(targetUserId, 'reaction', `reacted to your profile`, emoji);
 }
 
-// Fetch reactions for a user's profile
 async function fetchUserReactions(userId) {
     const userRef = doc(db, "users", userId);
     const userSnap = await getDoc(userRef);
@@ -471,10 +447,7 @@ async function saveLog(type) {
                 type: type,
                 timestamp: serverTimestamp()
             });
-            
-            // Update user stats
             await updateUserStats(currentUser.uid);
-            
         } catch (e) { 
             console.error("Error adding doc: ", e); 
         }
@@ -605,8 +578,20 @@ function renderYearlyHeatMap() {
 function renderLeaderboard() {
     const now = new Date();
     
-    // Use allUsers from Firebase (fetched earlier)
-    const ranked = allUsers.map(u => {
+    // Filter out private profiles and users who opted out of leaderboard
+    const visibleUsers = allUsers.filter(u => {
+        const isPrivate = u.settings?.privateProfile || false;
+        const showOnLeaderboard = u.settings?.showOnLeaderboard !== false; // default true
+        const isMe = currentUser && u.id === currentUser.uid;
+        
+        // Always show current user to themselves, even if private
+        if (isMe) return true;
+        
+        // Hide private profiles and those who opted out
+        return !isPrivate && showOnLeaderboard;
+    });
+    
+    const ranked = visibleUsers.map(u => {
         let count = 0;
         const stats = u.stats || {};
         
@@ -635,15 +620,19 @@ function renderLeaderboard() {
         if(i===2) rank = '🥉';
         
         const isMe = currentUser && u.id === currentUser.uid;
+        const isPrivate = u.settings?.privateProfile || false;
         const bgClass = isMe ? 'bg-orange-50 border-orange-200' : 'bg-white border-amber-100';
         const totalReactions = Object.values(u.reactions || {}).reduce((a, b) => a + b, 0);
+        
+        // Show private badge for current user if their profile is private
+        const privateBadge = isMe && isPrivate ? '<span class="ml-2 bg-purple-100 text-purple-600 text-[10px] font-bold px-2 py-0.5 rounded-full">🔒 Hidden</span>' : '';
 
         return `
             <div class="fun-btn flex items-center gap-4 ${bgClass} p-4 rounded-3xl border-2 cursor-pointer hover:border-amber-300 transition-colors" onclick="openUserDashboard('${u.id}')">
                 <div class="w-8 text-center text-2xl">${rank}</div>
                 <img src="${u.avatar || 'https://ui-avatars.com/api/?name=User'}" class="w-12 h-12 rounded-full bg-amber-50 border-2 border-amber-100">
                 <div class="flex-1">
-                    <div class="font-black text-amber-900 text-base">${u.name || 'Anonymous'} ${isMe ? '(You)' : ''}</div>
+                    <div class="font-black text-amber-900 text-base">${u.name || 'Anonymous'} ${isMe ? '(You)' : ''}${privateBadge}</div>
                     <div class="text-xs font-bold text-amber-400">${totalReactions} reactions</div>
                 </div>
                 <div class="text-right">
@@ -659,7 +648,6 @@ function renderLeaderboard() {
 // USER DASHBOARD - Updated with real data
 // ====================================
 window.openUserDashboard = async (uid) => {
-    // Fetch user from Firebase
     const userRef = doc(db, "users", uid);
     const userSnap = await getDoc(userRef);
     
@@ -669,6 +657,16 @@ window.openUserDashboard = async (uid) => {
     }
     
     const user = { id: userSnap.id, ...userSnap.data() };
+    
+    // Check if profile is private and viewer is not the owner
+    const isPrivate = user.settings?.privateProfile || false;
+    const isOwner = currentUser && currentUser.uid === uid;
+    
+    if (isPrivate && !isOwner) {
+        showToast('This profile is private 🔒');
+        return;
+    }
+    
     selectedUserId = uid;
 
     document.getElementById('dashboardName').textContent = user.name || 'Anonymous';
@@ -676,18 +674,13 @@ window.openUserDashboard = async (uid) => {
     document.getElementById('dashTotalPoops').textContent = user.stats?.totalLogs || 0;
     document.getElementById('dashStreak').textContent = calculateStreak(user.stats?.lastLogDate);
     
-    // Fetch user's logs for charts (if it's current user, use localLogs)
     let userLogs = [];
     if (currentUser && uid === currentUser.uid) {
         userLogs = localLogs;
     } else {
-        // For other users, we'd need to fetch their logs
-        // But that requires different security rules
-        // For now, show empty charts for other users
         userLogs = [];
     }
     
-    // Charts
     if(lineChartInstance) lineChartInstance.destroy();
     const ctxL = document.getElementById('lineChart').getContext('2d');
     const lData = [];
@@ -764,7 +757,6 @@ window.openUserDashboard = async (uid) => {
         }
     });
 
-    // Render reactions from Firebase
     renderReactionsUI(user.reactions || {});
     
     const m = document.getElementById('userDashboardModal');
@@ -778,7 +770,7 @@ function calculateStreak(lastLogDate) {
     const last = lastLogDate.toDate ? lastLogDate.toDate() : new Date(lastLogDate);
     const now = new Date();
     const diffDays = Math.floor((now - last) / (1000 * 60 * 60 * 24));
-    return diffDays <= 1 ? Math.floor(Math.random() * 5) + 1 : 0; // Simplified
+    return diffDays <= 1 ? Math.floor(Math.random() * 5) + 1 : 0;
 }
 
 function renderReactionsUI(reactions) {
@@ -799,12 +791,8 @@ document.querySelectorAll('.reaction-btn').forEach(btn => {
         const emoji = btn.dataset.reaction;
         if (selectedUserId) {
             await addReaction(selectedUserId, emoji);
-            
-            // Refresh the reactions display
             const reactions = await fetchUserReactions(selectedUserId);
             renderReactionsUI(reactions);
-            
-            // Visual feedback
             btn.classList.add('active');
             setTimeout(() => btn.classList.remove('active'), 500);
         }
@@ -833,40 +821,28 @@ document.getElementById('poopSlider').addEventListener('input', (e) => {
 });
 
 document.getElementById('logBtn').addEventListener('click', async () => {
-    // 1. CHECK COOLDOWN
     if (getRemainingCooldown() > 0) {
         const t = document.getElementById('toast');
-        // Update text for error
         const textSpan = t.querySelector('span');
         if(textSpan) textSpan.textContent = 'Please wait before logging again! ⏳';
-        
-        // Your original animation style
         t.classList.remove('opacity-0', 'translate-y-4');
         setTimeout(() => t.classList.add('opacity-0', 'translate-y-4'), 2000);
         return;
     }
 
-    // 2. YOUR ORIGINAL LOGIC
     const type = parseInt(document.getElementById('poopSlider').value);
-    
-    // Added 'await' to ensure data saves before we start the timer
     await saveLog(type); 
     
-    // 3. YOUR ORIGINAL TOAST STYLE (Success)
     const t = document.getElementById('toast');
-    // Reset text to success
     const textSpan = t.querySelector('span');
     if(textSpan) textSpan.textContent = 'Logged successfully! 💩';
 
     t.classList.remove('opacity-0', 'translate-y-4');
     setTimeout(() => t.classList.add('opacity-0', 'translate-y-4'), 2000);
 
-    // 4. START COOLDOWN
     setLastLogTime();
     startCooldownTimer();
 });
-
-
 
 // Heatmap Navigation
 document.getElementById('prevMonth').addEventListener('click', () => {
@@ -878,27 +854,14 @@ document.getElementById('nextMonth').addEventListener('click', () => {
 document.getElementById('prevYear').addEventListener('click', () => { displayYear--; renderYearlyHeatMap(); });
 document.getElementById('nextYear').addEventListener('click', () => { displayYear++; renderYearlyHeatMap(); });
 
-// Page Navigation
-const pages = ['trackerPage', 'leaderboardPage'];
-const navs = ['navTracker', 'navLeaderboard'];
+// Page Navigation (updated to use navigateToPage)
+document.getElementById('navTracker').addEventListener('click', () => {
+    navigateToPage('trackerPage');
+});
 
-navs.forEach((id, idx) => {
-    document.getElementById(id).addEventListener('click', () => {
-        pages.forEach(p => document.getElementById(p).classList.remove('active'));
-        navs.forEach(n => {
-            const el = document.getElementById(n);
-            el.classList.remove('tab-active');
-            el.classList.add('text-gray-500', 'hover:text-gray-900');
-        });
-        
-        document.getElementById(pages[idx]).classList.add('active');
-        document.getElementById(id).classList.add('tab-active');
-        document.getElementById(id).classList.remove('text-gray-500', 'hover:text-gray-900');
-        
-        if(idx === 1) {
-            fetchAllUsersForLeaderboard();
-        }
-    });
+document.getElementById('navLeaderboard').addEventListener('click', () => {
+    navigateToPage('leaderboardPage');
+    fetchAllUsersForLeaderboard();
 });
 
 // Leaderboard Tabs
@@ -960,6 +923,469 @@ loadLocalData();
 initCooldown();
 
 // ====================================
+// SIDE PANEL MENU
+// ====================================
+const sidePanel = document.getElementById('sidePanel');
+const sidePanelOverlay = document.getElementById('sidePanelOverlay');
+const closeSidePanelBtn = document.getElementById('closeSidePanel');
+const userAvatarBtn = document.getElementById('userAvatar');
+const guestSection = document.getElementById('guestSection');
+
+function openSidePanel() {
+    sidePanel.classList.add('open');
+    sidePanelOverlay.classList.add('open');
+    document.body.style.overflow = 'hidden';
+}
+
+function closeSidePanel() {
+    sidePanel.classList.remove('open');
+    sidePanelOverlay.classList.remove('open');
+    document.body.style.overflow = '';
+}
+
+function updateSidePanelUser() {
+    const sidePanelAvatar = document.getElementById('sidePanelAvatar');
+    const sidePanelName = document.getElementById('sidePanelName');
+    const sidePanelEmail = document.getElementById('sidePanelEmail');
+    const menuLogout = document.getElementById('menuLogout');
+    
+    if (currentUser) {
+        sidePanelAvatar.src = currentUser.photoURL || 'https://ui-avatars.com/api/?name=User&background=fde68a&color=92400e';
+        sidePanelName.textContent = currentUser.displayName || 'User';
+        sidePanelEmail.textContent = currentUser.email || '';
+        menuLogout.style.display = 'flex';
+    } else {
+        sidePanelAvatar.src = 'https://ui-avatars.com/api/?name=Guest&background=fde68a&color=92400e';
+        sidePanelName.textContent = 'Guest';
+        sidePanelEmail.textContent = 'Not logged in';
+        menuLogout.style.display = 'none';
+    }
+}
+
+// Avatar click opens side panel
+if (userAvatarBtn) {
+    userAvatarBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        openSidePanel();
+        updateSidePanelUser();
+    });
+}
+
+// Guest avatar click also opens side panel
+if (guestSection) {
+    guestSection.addEventListener('click', (e) => {
+        e.stopPropagation();
+        openSidePanel();
+        updateSidePanelUser();
+    });
+}
+
+// Close panel handlers
+closeSidePanelBtn.addEventListener('click', closeSidePanel);
+sidePanelOverlay.addEventListener('click', closeSidePanel);
+
+// Menu logout
+document.getElementById('menuLogout').addEventListener('click', () => {
+    closeSidePanel();
+    logoutUser();
+});
+
+// ====================================
+// NEW PAGES NAVIGATION
+// ====================================
+const allPages = ['trackerPage', 'leaderboardPage', 'myDashboardPage', 'profilePage', 'settingsPage'];
+const mainNavs = ['navTracker', 'navLeaderboard'];
+
+function navigateToPage(pageId) {
+    // Hide all pages
+    allPages.forEach(p => {
+        const page = document.getElementById(p);
+        if (page) page.classList.remove('active');
+    });
+    
+    // Remove active from nav buttons
+    mainNavs.forEach(n => {
+        const nav = document.getElementById(n);
+        if (nav) {
+            nav.classList.remove('tab-active');
+            nav.classList.add('text-amber-500', 'hover:text-amber-700', 'hover:bg-amber-50');
+        }
+    });
+    
+    // Show target page
+    const targetPage = document.getElementById(pageId);
+    if (targetPage) targetPage.classList.add('active');
+    
+    // If it's a main nav page, highlight the nav button
+    if (pageId === 'trackerPage') {
+        document.getElementById('navTracker').classList.add('tab-active');
+        document.getElementById('navTracker').classList.remove('text-amber-500');
+    } else if (pageId === 'leaderboardPage') {
+        document.getElementById('navLeaderboard').classList.add('tab-active');
+        document.getElementById('navLeaderboard').classList.remove('text-amber-500');
+    }
+    
+    closeSidePanel();
+}
+
+// Menu item handlers
+document.getElementById('menuMyDashboard').addEventListener('click', () => {
+    navigateToPage('myDashboardPage');
+    renderMyDashboard();
+});
+
+document.getElementById('menuProfile').addEventListener('click', () => {
+    navigateToPage('profilePage');
+    renderProfilePage();
+});
+
+document.getElementById('menuSettings').addEventListener('click', () => {
+    navigateToPage('settingsPage');
+});
+
+document.getElementById('menuTracker').addEventListener('click', () => {
+    navigateToPage('trackerPage');
+});
+
+document.getElementById('menuLeaderboard').addEventListener('click', () => {
+    navigateToPage('leaderboardPage');
+    fetchAllUsersForLeaderboard();
+});
+
+// ====================================
+// MY DASHBOARD PAGE RENDERING
+// ====================================
+let myDashLineChartInstance = null;
+let myDashPieChartInstance = null;
+
+function renderMyDashboard() {
+    const logs = localLogs;
+    
+    // Total logs
+    document.getElementById('dashMyTotalLogs').textContent = logs.length;
+    
+    // Calculate streak (simplified)
+    let streak = 0;
+    const today = new Date();
+    for (let i = 0; i < 30; i++) {
+        const checkDate = new Date(today);
+        checkDate.setDate(checkDate.getDate() - i);
+        const hasLog = logs.some(l => new Date(l.date).toDateString() === checkDate.toDateString());
+        if (hasLog) streak++;
+        else if (i > 0) break;
+    }
+    document.getElementById('dashMyStreak').textContent = streak;
+    
+    // Daily average (last 30 days)
+    const thirtyDaysAgo = new Date(today - 30 * 24 * 60 * 60 * 1000);
+    const recentLogs = logs.filter(l => new Date(l.date) >= thirtyDaysAgo);
+    const dailyAvg = recentLogs.length > 0 ? (recentLogs.length / 30).toFixed(1) : '0';
+    document.getElementById('dashDailyAvg').textContent = dailyAvg;
+    
+    // Most common type
+    const typeCounts = {};
+    logs.forEach(l => typeCounts[l.type] = (typeCounts[l.type] || 0) + 1);
+    const mostCommonType = Object.entries(typeCounts).sort((a, b) => b[1] - a[1])[0];
+    if (mostCommonType) {
+        document.getElementById('dashMostCommon').textContent = `${poopTypes[mostCommonType[0]]?.emoji || '💩'} Type ${mostCommonType[0]}`;
+    } else {
+        document.getElementById('dashMostCommon').textContent = '-';
+    }
+    
+    // Best day of week
+    const dayCounts = [0, 0, 0, 0, 0, 0, 0];
+    const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    logs.forEach(l => {
+        const day = new Date(l.date).getDay();
+        dayCounts[day]++;
+    });
+    const bestDayIndex = dayCounts.indexOf(Math.max(...dayCounts));
+    document.getElementById('dashBestDay').textContent = logs.length > 0 ? dayNames[bestDayIndex] : '-';
+    
+    // Health score (based on type 3-4 being ideal)
+    const idealLogs = logs.filter(l => l.type === 3 || l.type === 4).length;
+    const healthScore = logs.length > 0 ? Math.round((idealLogs / logs.length) * 100) : 0;
+    document.getElementById('dashHealthScore').textContent = `${healthScore}%`;
+    
+    // Weekly line chart
+    if (myDashLineChartInstance) myDashLineChartInstance.destroy();
+    const ctxL = document.getElementById('myDashLineChart').getContext('2d');
+    const lData = [];
+    const lLabels = [];
+    for (let i = 6; i >= 0; i--) {
+        const d = new Date();
+        d.setDate(d.getDate() - i);
+        lLabels.push(dayNames[d.getDay()]);
+        lData.push(logs.filter(l => new Date(l.date).toDateString() === d.toDateString()).length);
+    }
+    myDashLineChartInstance = new Chart(ctxL, {
+        type: 'line',
+        data: {
+            labels: lLabels,
+            datasets: [{
+                label: 'Logs',
+                data: lData,
+                borderColor: '#f97316',
+                backgroundColor: 'rgba(249,115,22,0.1)',
+                fill: true,
+                tension: 0.4,
+                pointRadius: 4,
+                pointBackgroundColor: '#f97316',
+                borderWidth: 3
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+            scales: {
+                x: { grid: { display: false } },
+                y: { beginAtZero: true, ticks: { stepSize: 1 } }
+            }
+        }
+    });
+    
+    // Pie chart
+    if (myDashPieChartInstance) myDashPieChartInstance.destroy();
+    const ctxP = document.getElementById('myDashPieChart').getContext('2d');
+    const pData = Object.keys(poopTypes).map(k => typeCounts[k] || 0);
+    myDashPieChartInstance = new Chart(ctxP, {
+        type: 'doughnut',
+        data: {
+            labels: Object.values(poopTypes).map(t => `${t.emoji} ${t.label}`),
+            datasets: [{
+                data: pData,
+                backgroundColor: Object.values(poopTypes).map(t => t.color),
+                borderWidth: 0
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    display: true,
+                    position: 'bottom',
+                    labels: { boxWidth: 12, padding: 10, font: { size: 10 } }
+                }
+            }
+        }
+    });
+}
+
+// ====================================
+// PROFILE PAGE RENDERING
+// ====================================
+async function renderProfilePage() {
+    const profileAvatar = document.getElementById('profileAvatar');
+    const profileName = document.getElementById('profileName');
+    const profileEmail = document.getElementById('profileEmail');
+    const profileJoinDate = document.getElementById('profileJoinDate');
+    const profileTotalLogs = document.getElementById('profileTotalLogs');
+    const profileRank = document.getElementById('profileRank');
+    const profileReactions = document.getElementById('profileReactions');
+    const profilePrivacyBadge = document.getElementById('profilePrivacyBadge');
+    
+    if (currentUser) {
+        profileAvatar.src = currentUser.photoURL || 'https://ui-avatars.com/api/?name=User';
+        profileName.textContent = currentUser.displayName || 'User';
+        profileEmail.textContent = currentUser.email || '';
+        
+        // Fetch user data from Firebase
+        const userRef = doc(db, "users", currentUser.uid);
+        const userSnap = await getDoc(userRef);
+        
+        if (userSnap.exists()) {
+            const userData = userSnap.data();
+            
+            // Show/hide privacy badge
+            const isPrivate = userData.settings?.privateProfile || false;
+            if (isPrivate) {
+                profilePrivacyBadge.classList.remove('hidden');
+            } else {
+                profilePrivacyBadge.classList.add('hidden');
+            }
+            
+            // Join date
+            if (userData.createdAt) {
+                const joinDate = userData.createdAt.toDate();
+                profileJoinDate.textContent = joinDate.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+            }
+            
+            // Total logs
+            profileTotalLogs.textContent = userData.stats?.totalLogs || localLogs.length;
+            
+            // Calculate rank (only among visible users if not private)
+            if (isPrivate) {
+                profileRank.textContent = '🔒 Hidden';
+            } else {
+                const rankIndex = allUsers.findIndex(u => u.id === currentUser.uid);
+                profileRank.textContent = rankIndex >= 0 ? `#${rankIndex + 1}` : '#-';
+            }
+            
+            // Reactions
+            const reactions = userData.reactions || {};
+            const reactionEntries = Object.entries(reactions).filter(([k, v]) => v > 0);
+            if (reactionEntries.length > 0) {
+                profileReactions.innerHTML = reactionEntries.map(([emoji, count]) => 
+                    `<span class="bg-amber-50 px-3 py-1 rounded-full">${emoji} <span class="font-black text-amber-800">${count}</span></span>`
+                ).join('');
+            } else {
+                profileReactions.innerHTML = '<span class="text-amber-300">No reactions yet</span>';
+            }
+        }
+    } else {
+        profileAvatar.src = 'https://ui-avatars.com/api/?name=Guest&background=fde68a&color=92400e';
+        profileName.textContent = 'Guest';
+        profileEmail.textContent = 'Sign in to save your data';
+        profileJoinDate.textContent = '-';
+        profileTotalLogs.textContent = localLogs.length;
+        profileRank.textContent = '#-';
+        profileReactions.innerHTML = '<span class="text-amber-300">Sign in to receive reactions</span>';
+        profilePrivacyBadge.classList.add('hidden');
+    }
+}
+
+// ====================================
+// SETTINGS HANDLERS
+// ====================================
+document.getElementById('exportDataBtn').addEventListener('click', () => {
+    const data = {
+        logs: localLogs,
+        exportDate: new Date().toISOString(),
+        user: currentUser ? { name: currentUser.displayName, email: currentUser.email } : { name: 'Guest' }
+    };
+    
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `poop-master-data-${new Date().toISOString().split('T')[0]}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+    
+    showToast('Data exported successfully! 📦');
+});
+
+document.getElementById('clearDataBtn').addEventListener('click', () => {
+    if (confirm('Are you sure you want to clear all your local data? This cannot be undone!')) {
+        localStorage.removeItem('poopLogs');
+        localStorage.removeItem('lastLogTime');
+        localLogs = [];
+        refreshAllViews();
+        showToast('Data cleared! 🗑️');
+    }
+});
+
+// ====================================
+// PRIVATE PROFILE TOGGLE HANDLER
+// ====================================
+const privateProfileToggle = document.getElementById('settingPrivateProfile');
+const showOnLeaderboardToggle = document.getElementById('settingLeaderboard');
+
+// Load privacy settings from Firebase when settings page is opened
+async function loadPrivacySettings() {
+    if (!currentUser) return;
+    
+    try {
+        const userRef = doc(db, "users", currentUser.uid);
+        const userSnap = await getDoc(userRef);
+        
+        if (userSnap.exists()) {
+            const userData = userSnap.data();
+            const isPrivate = userData.settings?.privateProfile || false;
+            const showOnLeaderboard = userData.settings?.showOnLeaderboard !== false; // default true
+            
+            privateProfileToggle.checked = isPrivate;
+            showOnLeaderboardToggle.checked = showOnLeaderboard;
+            
+            // If private profile is on, disable and uncheck leaderboard toggle
+            if (isPrivate) {
+                showOnLeaderboardToggle.checked = false;
+                showOnLeaderboardToggle.disabled = true;
+                showOnLeaderboardToggle.parentElement.classList.add('opacity-50');
+            }
+        }
+    } catch (error) {
+        console.error("Error loading privacy settings:", error);
+    }
+}
+
+// Save private profile setting to Firebase
+async function savePrivateProfileSetting(isPrivate) {
+    if (!currentUser) {
+        showToast('Please sign in to change settings 🔐');
+        privateProfileToggle.checked = false;
+        return;
+    }
+    
+    try {
+        const userRef = doc(db, "users", currentUser.uid);
+        await updateDoc(userRef, {
+            'settings.privateProfile': isPrivate,
+            'settings.showOnLeaderboard': !isPrivate // If private, hide from leaderboard
+        });
+        
+        // Update the leaderboard toggle state
+        if (isPrivate) {
+            showOnLeaderboardToggle.checked = false;
+            showOnLeaderboardToggle.disabled = true;
+            showOnLeaderboardToggle.parentElement.classList.add('opacity-50');
+        } else {
+            showOnLeaderboardToggle.disabled = false;
+            showOnLeaderboardToggle.parentElement.classList.remove('opacity-50');
+        }
+        
+        // Refresh leaderboard
+        renderLeaderboard();
+        
+        showToast(isPrivate ? 'Profile is now private 🔒' : 'Profile is now public 🌐');
+    } catch (error) {
+        console.error("Error saving privacy setting:", error);
+        showToast('Failed to save setting ❌');
+    }
+}
+
+// Save show on leaderboard setting
+async function saveLeaderboardSetting(showOnLeaderboard) {
+    if (!currentUser) {
+        showToast('Please sign in to change settings 🔐');
+        showOnLeaderboardToggle.checked = true;
+        return;
+    }
+    
+    try {
+        const userRef = doc(db, "users", currentUser.uid);
+        await updateDoc(userRef, {
+            'settings.showOnLeaderboard': showOnLeaderboard
+        });
+        
+        // Refresh leaderboard
+        renderLeaderboard();
+        
+        showToast(showOnLeaderboard ? 'Visible on leaderboard 📊' : 'Hidden from leaderboard 👻');
+    } catch (error) {
+        console.error("Error saving leaderboard setting:", error);
+        showToast('Failed to save setting ❌');
+    }
+}
+
+// Event listeners for privacy toggles
+privateProfileToggle.addEventListener('change', (e) => {
+    savePrivateProfileSetting(e.target.checked);
+});
+
+showOnLeaderboardToggle.addEventListener('change', (e) => {
+    saveLeaderboardSetting(e.target.checked);
+});
+
+// Load settings when navigating to settings page
+const originalMenuSettingsHandler = document.getElementById('menuSettings').onclick;
+document.getElementById('menuSettings').addEventListener('click', () => {
+    loadPrivacySettings();
+});
+
+// ====================================
 // SHARING: X (Twitter), Instagram, SMS
 // ====================================
 function getShareUrlForSelectedUser() {
@@ -982,7 +1408,6 @@ async function shareToInstagram() {
     const url = getShareUrlForSelectedUser();
     const text = `The path to becoming a 💩Poop Master💩 starts with a single log.`;
 
-    // Prefer Web Share API when available (mobile/modern browsers)
     if (navigator.share) {
         try {
             await navigator.share({ title: "Poop Tracker", text, url });
@@ -992,13 +1417,11 @@ async function shareToInstagram() {
         }
     }
 
-    // Fallback: copy share text to clipboard and open Instagram homepage
     try {
         await navigator.clipboard.writeText(text);
         window.open('https://www.instagram.com/', '_blank');
         alert('Share text copied to clipboard. Paste it into Instagram to share.');
     } catch (e) {
-        // As a last resort, just open instagram
         window.open('https://www.instagram.com/', '_blank');
     }
 }
@@ -1007,12 +1430,11 @@ function shareToSMS() {
     const name = document.getElementById('dashboardName')?.textContent || 'a user';
     const url = getShareUrlForSelectedUser();
     const body = `Check out ${name}'s Poop Tracker stats: ${url}`;
-    // Use sms: URL scheme. Use &body if needed for iOS vs Android compatibility.
     const smsUrl = `sms:?body=${encodeURIComponent(body)}`;
     window.location.href = smsUrl;
 }
 
-// Wire up buttons if present (support a few common id/name variants)
+// Wire up buttons
 const _getEl = (ids) => ids.map(id => document.getElementById(id)).find(Boolean);
 const xBtn = _getEl(['shareX', 'shareXBtn', 'shareTwitter', 'share-twitter']);
 const igBtn = _getEl(['shareInstagram', 'shareInstagramBtn', 'shareIG', 'share-instagram']);
