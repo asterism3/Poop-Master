@@ -714,7 +714,7 @@ window.openUserDashboard = async (uid) => {
             plugins: { legend: { display: false } },
             scales: {
                 x: { grid: { display: false }, ticks: { maxRotation: 0, autoSkip: true } },
-                y: { display: false }
+                y: { display: true, beginAtZero: true, grid: { color: 'rgba(0,0,0,0.05)' }, ticks: { stepSize: 1 } }
             },
             elements: {
                 point: { radius: 3 }
@@ -748,8 +748,8 @@ window.openUserDashboard = async (uid) => {
                         generateLabels: function(chart) {
                             const data = chart.data;
                             if (!data || !data.datasets || !data.datasets.length) return [];
-                            return data.labels.map((label, i) => ({
-                                text: `${label} ${data.datasets[0].data[i] || 0}`,
+                            return Object.keys(poopTypes).map((typeKey, i) => ({
+                                text: `T${typeKey}`,
                                 fillStyle: data.datasets[0].backgroundColor[i],
                                 hidden: false,
                                 index: i

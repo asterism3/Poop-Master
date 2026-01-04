@@ -7,7 +7,7 @@
     <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Fredoka:wght@300;400;500;600;700&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Fredoka:wght@300;400;500;600;700&family=DynaPuff:wght@400;500;600;700&display=swap');
         
         body {
             font-family: 'Fredoka', sans-serif;
@@ -170,24 +170,24 @@
     
     <!-- Share Bar -->
     <div class="fixed top-0 left-0 right-0 bg-white/90 backdrop-blur-md z-50 border-b-4 border-amber-100">
-        <div class="max-w-3xl mx-auto px-4 py-2 flex items-center justify-between">
+        <div class="max-w-3xl mx-auto px-4 py-2 flex items-center justify-between relative">
+            <div class="absolute left-1/2 transform -translate-x-1/2">
+                <h1 class="text-2xl font-bold text-orange-500" style="font-family: 'DynaPuff', sans-serif;">Poop Master</h1>
+            </div>
             <div class="flex gap-2">
                 <!-- X.com -->
-                <button id="shareX" class="flex items-center gap-1.5 bg-black text-white px-3 py-1.5 rounded-full text-xs font-semibold hover:bg-gray-800 transition-colors">
-                    <svg class="w-3 h-3" viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
-                    <span class="hidden sm:inline">Post</span>
+                <button id="shareX" class="flex items-center justify-center bg-black text-white w-9 h-9 rounded-full hover:bg-gray-800 transition-colors">
+                    <svg class="w-4 h-4" viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
                 </button>
                 
                 <!-- Instagram -->
-                <button id="shareInstagram" class="flex items-center gap-1.5 bg-gradient-to-tr from-yellow-400 via-orange-500 to-purple-600 text-white px-3 py-1.5 rounded-full text-xs font-semibold hover:opacity-90 transition-opacity">
-                    <svg class="w-3 h-3" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/></svg>
-                    <span class="hidden sm:inline">Story</span>
+                <button id="shareInstagram" class="flex items-center justify-center bg-gradient-to-tr from-yellow-400 via-orange-500 to-purple-600 text-white w-9 h-9 rounded-full hover:opacity-90 transition-opacity">
+                    <svg class="w-4 h-4" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/></svg>
                 </button>
                 
                 <!-- SMS -->
-                <button id="shareSMS" class="flex items-center gap-1.5 bg-green-500 text-white px-3 py-1.5 rounded-full text-xs font-semibold hover:bg-green-600 transition-colors">
-                    <svg class="w-3 h-3" viewBox="0 0 24 24" fill="currentColor"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 14H5.17L4 17.17V4h16v12zM7 9h2v2H7zm4 0h2v2h-2zm4 0h2v2h-2z"/></svg>
-                    <span class="hidden sm:inline">SMS</span>
+                <button id="shareSMS" class="flex items-center justify-center bg-green-500 text-white w-9 h-9 rounded-full hover:bg-green-600 transition-colors">
+                    <svg class="w-4 h-4" viewBox="0 0 24 24" fill="currentColor"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 14H5.17L4 17.17V4h16v12zM7 9h2v2H7zm4 0h2v2h-2zm4 0h2v2h-2z"/></svg>
                 </button>
             </div>
 
@@ -236,8 +236,8 @@
     <div class="pt-16 pb-4">
         <div class="max-w-md mx-auto px-6 text-center">
             <nav class="inline-flex bg-white p-2 rounded-full border-2 border-amber-100 shadow-sm">
-                <button id="navTracker" class="px-6 py-2 rounded-full text-sm font-bold transition-all tab-active">Tracker</button>
-                <button id="navLeaderboard" class="px-6 py-2 rounded-full text-sm font-bold transition-all text-amber-500 hover:text-amber-700 hover:bg-amber-50">Leaderboard</button>
+                <button id="navTracker" class="px-8 py-3 rounded-full text-base font-bold transition-all tab-active">TRACKER</button>
+                <button id="navLeaderboard" class="px-8 py-3 rounded-full text-base font-bold transition-all text-amber-500 hover:text-amber-700 hover:bg-amber-50">LEADERBOARD</button>
             </nav>
         </div>
     </div>
@@ -364,8 +364,8 @@
         <div class="max-w-md mx-auto px-6 py-6">
             
             <div class="text-center mb-8">
-                <h2 class="text-3xl font-black text-amber-900 tracking-tight">Leaderboard</h2>
-                <p class="text-amber-500 font-bold text-sm">Community Rankings</p>
+                <h2 class="text-4xl font-black text-amber-900 tracking-tight" style="font-family: 'DynaPuff', sans-serif; font-size: 2.125rem;">🏆 Leaderboard</h2>
+                <p class="text-amber-500 font-bold text-sm">Bowel Movement Final Boss</p>
             </div>
 
             <!-- Tabs -->
