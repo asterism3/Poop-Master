@@ -693,12 +693,34 @@ window.openUserDashboard = async (uid) => {
         lData.push(userLogs.filter(l => new Date(l.date).toDateString() === d.toDateString()).length);
     }
     lineChartInstance = new Chart(ctxL, {
-        type: 'bar',
+        type: 'line',
         data: {
             labels: ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'], 
-            datasets: [{label:'Logs', data:lData, backgroundColor:'#f97316', borderRadius:4}]
+            datasets: [{
+                label: 'Logs',
+                data: lData,
+                borderColor: '#f97316',
+                backgroundColor: 'rgba(249,115,22,0.08)',
+                fill: true,
+                tension: 0.35,
+                pointRadius: 3,
+                pointHoverRadius: 5,
+                borderWidth: 2
+            }]
         },
-        options: { responsive:true, plugins:{legend:{display:false}}, scales:{x:{grid:{display:false}}, y:{display:false}} }
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+            scales: {
+                x: { grid: { display: false }, ticks: { maxRotation: 0, autoSkip: true } },
+                y: { display: false }
+            },
+            elements: {
+                point: { radius: 3 }
+            },
+            layout: { padding: { top: 6, bottom: 2, left: 0, right: 0 } }
+        }
     });
 
     if(pieChartInstance) pieChartInstance.destroy();
@@ -933,3 +955,65 @@ document.getElementById('markAllRead').addEventListener('click', async () => {
 // Init
 loadLocalData();
 initCooldown();
+
+// ====================================
+// SHARING: X (Twitter), Instagram, SMS
+// ====================================
+function getShareUrlForSelectedUser() {
+    const uid = selectedUserId || '';
+    const origin = window.location.origin;
+    const path = window.location.pathname;
+    return `${origin}${path}?sharedUser=${encodeURIComponent(uid)}`;
+}
+
+async function shareToX() {
+    const name = document.getElementById('dashboardName')?.textContent || 'a user';
+    const url = getShareUrlForSelectedUser();
+    const text = `Check out my poop stats in the big 26!`;
+    const intent = `https://x.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(url)}`;
+    window.open(intent, '_blank');
+}
+
+async function shareToInstagram() {
+    const name = document.getElementById('dashboardName')?.textContent || 'a user';
+    const url = getShareUrlForSelectedUser();
+    const text = `The path to becoming a 💩Poop Master💩 starts with a single log.`;
+
+    // Prefer Web Share API when available (mobile/modern browsers)
+    if (navigator.share) {
+        try {
+            await navigator.share({ title: "Poop Tracker", text, url });
+            return;
+        } catch (e) {
+            // fallthrough to clipboard fallback
+        }
+    }
+
+    // Fallback: copy share text to clipboard and open Instagram homepage
+    try {
+        await navigator.clipboard.writeText(text);
+        window.open('https://www.instagram.com/', '_blank');
+        alert('Share text copied to clipboard. Paste it into Instagram to share.');
+    } catch (e) {
+        // As a last resort, just open instagram
+        window.open('https://www.instagram.com/', '_blank');
+    }
+}
+
+function shareToSMS() {
+    const name = document.getElementById('dashboardName')?.textContent || 'a user';
+    const url = getShareUrlForSelectedUser();
+    const body = `Check out ${name}'s Poop Tracker stats: ${url}`;
+    // Use sms: URL scheme. Use &body if needed for iOS vs Android compatibility.
+    const smsUrl = `sms:?body=${encodeURIComponent(body)}`;
+    window.location.href = smsUrl;
+}
+
+// Wire up buttons if present (support a few common id/name variants)
+const _getEl = (ids) => ids.map(id => document.getElementById(id)).find(Boolean);
+const xBtn = _getEl(['shareX', 'shareXBtn', 'shareTwitter', 'share-twitter']);
+const igBtn = _getEl(['shareInstagram', 'shareInstagramBtn', 'shareIG', 'share-instagram']);
+const smsBtn = _getEl(['shareSMS', 'shareSms', 'share-sms']);
+if (xBtn) xBtn.addEventListener('click', (e) => { e.preventDefault(); shareToX(); });
+if (igBtn) igBtn.addEventListener('click', (e) => { e.preventDefault(); shareToInstagram(); });
+if (smsBtn) smsBtn.addEventListener('click', (e) => { e.preventDefault(); shareToSMS(); });
