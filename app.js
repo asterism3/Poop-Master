@@ -711,7 +711,32 @@ window.openUserDashboard = async (uid) => {
             labels: Object.values(poopTypes).map(t=>t.emoji),
             datasets: [{ data: Object.keys(poopTypes).map(k => pCounts[k] || 0), backgroundColor:Object.values(poopTypes).map(t=>t.color), borderWidth:0 }]
         },
-        options: { responsive:true, plugins:{legend:{display:false}} }
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    display: true,
+                    position: 'right',
+                    align: 'center',
+                    labels: {
+                        boxWidth: 12,
+                        padding: 8,
+                        usePointStyle: true,
+                        generateLabels: function(chart) {
+                            const data = chart.data;
+                            if (!data || !data.datasets || !data.datasets.length) return [];
+                            return data.labels.map((label, i) => ({
+                                text: `${label} ${data.datasets[0].data[i] || 0}`,
+                                fillStyle: data.datasets[0].backgroundColor[i],
+                                hidden: false,
+                                index: i
+                            }));
+                        }
+                    }
+                }
+            }
+        }
     });
 
     // Render reactions from Firebase
