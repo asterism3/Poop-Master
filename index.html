@@ -233,16 +233,19 @@
         <div class="max-w-md mx-auto px-6 py-6">
             
             <!-- Current Emoji Display -->
-            <div class="text-center mb-8 relative">
-                <div id="currentEmoji" class="text-9xl mb-4 inline-block drop-shadow-lg transition-transform duration-200">💩</div>
+            <div class="text-center mb-8 relative flex flex-col items-center">
+                <div id="currentEmoji" class="text-9xl mb-4 drop-shadow-lg transition-transform duration-200">💩</div>
+                
+                <!-- Type Label -->
+                <div id="stageLabel" class="text-2xl font-black text-amber-900 mb-4">Type 4 - Normal</div>
                 
                 <!-- Tooltip Trigger -->
                 <div class="tooltip-trigger inline-flex items-center justify-center gap-2 px-4 py-2 bg-orange-50 rounded-full text-orange-800 font-medium text-sm cursor-help hover:bg-orange-100 transition-colors">
-                    <span id="stageLabel">Type 4 - Normal</span>
+                    <span class="text-xs">Bristol Stool Scale</span>
                     <svg class="w-4 h-4 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
                     
                     <!-- Tooltip -->
-                    <div class="tooltip absolute left-1/2 bottom-full mb-3 w-72 bg-white rounded-xl shadow-xl border border-gray-100 p-4 text-left z-20">
+                    <div class="tooltip absolute left-1/2 top-full mt-3 w-72 bg-white rounded-xl shadow-xl border border-gray-100 p-4 text-left z-20">
                         <h4 class="font-bold text-gray-900 text-sm mb-1">Bristol Stool Scale</h4>
                         <p class="text-xs text-gray-500 mb-2 leading-relaxed">
                             A diagnostic medical tool classifying human faeces into seven categories.
