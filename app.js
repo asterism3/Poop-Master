@@ -63,6 +63,101 @@ let selectedUserId = null;
 let lineChartInstance = null;
 let pieChartInstance = null;
 
+// ============================================
+// NEW: COOLDOWN SYSTEM
+// ============================================
+const COOLDOWN_DURATION = 5 * 60 * 1000; // 5 minutes
+let cooldownInterval = null;
+
+function getLastLogTime() {
+    const lastLogTime = localStorage.getItem('lastLogTime');
+    return lastLogTime ? parseInt(lastLogTime, 10) : null;
+}
+
+function setLastLogTime() {
+    localStorage.setItem('lastLogTime', Date.now().toString());
+}
+
+function getRemainingCooldown() {
+    const lastLogTime = getLastLogTime();
+    if (!lastLogTime) return 0;
+    const elapsed = Date.now() - lastLogTime;
+    const remaining = COOLDOWN_DURATION - elapsed;
+    return remaining > 0 ? remaining : 0;
+}
+
+function formatTime(ms) {
+    const totalSeconds = Math.ceil(ms / 1000);
+    const minutes = Math.floor(totalSeconds / 60);
+    const seconds = totalSeconds % 60;
+    return `${minutes}:${seconds.toString().padStart(2, '0')}`;
+}
+
+function updateCooldownUI() {
+    const logBtn = document.getElementById('logBtn');
+    
+    // Attempt to find inner elements (if you have them), otherwise use button
+    const logBtnText = document.getElementById('logBtnText'); 
+    const logBtnIcon = document.getElementById('logBtnIcon');
+    
+    const remaining = getRemainingCooldown();
+    
+    if (remaining > 0) {
+        logBtn.disabled = true;
+        const timeText = `Wait ${formatTime(remaining)}`;
+        
+        // Handle UI update safely whether you have spans or just text
+        if(logBtnText) logBtnText.textContent = timeText;
+        else logBtn.textContent = timeText;
+        
+        if(logBtnIcon) logBtnIcon.classList.add('hidden');
+        logBtn.classList.add('animate-pulse', 'bg-gray-400', 'cursor-not-allowed'); // Add styling
+    } else {
+        logBtn.disabled = false;
+        
+        if(logBtnText) logBtnText.textContent = 'LOG IT!';
+        else logBtn.textContent = 'LOG IT!';
+        
+        if(logBtnIcon) logBtnIcon.classList.remove('hidden');
+        logBtn.classList.remove('animate-pulse', 'bg-gray-400', 'cursor-not-allowed');
+        
+        if (cooldownInterval) {
+            clearInterval(cooldownInterval);
+            cooldownInterval = null;
+        }
+    }
+}
+
+function startCooldownTimer() {
+    updateCooldownUI();
+    if (cooldownInterval) clearInterval(cooldownInterval);
+    
+    cooldownInterval = setInterval(() => {
+        const remaining = getRemainingCooldown();
+        if (remaining <= 0) {
+            clearInterval(cooldownInterval);
+            cooldownInterval = null;
+        }
+        updateCooldownUI();
+    }, 1000);
+}
+
+function initCooldown() {
+    const remaining = getRemainingCooldown();
+    if (remaining > 0) startCooldownTimer();
+}
+
+// Reuse your existing toast style, or add this helper
+function showToast(message) {
+    const t = document.getElementById('toast');
+    // If you have a span inside the toast for text:
+    const textSpan = t.querySelector('span'); 
+    if(textSpan) textSpan.textContent = message;
+    
+    t.classList.remove('opacity-0', 'translate-y-4');
+    setTimeout(() => t.classList.add('opacity-0', 'translate-y-4'), 3000);
+}
+
 // --- AUTHENTICATION ---
 const googleLoginBtn = document.getElementById('googleLoginBtn');
 const googleSignInModal = document.getElementById('googleSignInModal');
@@ -687,14 +782,41 @@ document.getElementById('poopSlider').addEventListener('input', (e) => {
     document.getElementById('stageLabel').textContent = `${t.label} - ${t.desc}`;
 });
 
-document.getElementById('logBtn').addEventListener('click', () => {
+document.getElementById('logBtn').addEventListener('click', async () => {
+    // 1. CHECK COOLDOWN
+    if (getRemainingCooldown() > 0) {
+        const t = document.getElementById('toast');
+        // Update text for error
+        const textSpan = t.querySelector('span');
+        if(textSpan) textSpan.textContent = 'Please wait before logging again! ⏳';
+        
+        // Your original animation style
+        t.classList.remove('opacity-0', 'translate-y-4');
+        setTimeout(() => t.classList.add('opacity-0', 'translate-y-4'), 2000);
+        return;
+    }
+
+    // 2. YOUR ORIGINAL LOGIC
     const type = parseInt(document.getElementById('poopSlider').value);
-    saveLog(type);
     
+    // Added 'await' to ensure data saves before we start the timer
+    await saveLog(type); 
+    
+    // 3. YOUR ORIGINAL TOAST STYLE (Success)
     const t = document.getElementById('toast');
+    // Reset text to success
+    const textSpan = t.querySelector('span');
+    if(textSpan) textSpan.textContent = 'Logged successfully! 💩';
+
     t.classList.remove('opacity-0', 'translate-y-4');
     setTimeout(() => t.classList.add('opacity-0', 'translate-y-4'), 2000);
+
+    // 4. START COOLDOWN
+    setLastLogTime();
+    startCooldownTimer();
 });
+
+
 
 // Heatmap Navigation
 document.getElementById('prevMonth').addEventListener('click', () => {
@@ -785,3 +907,4 @@ document.getElementById('markAllRead').addEventListener('click', async () => {
 
 // Init
 loadLocalData();
+initCooldown();
