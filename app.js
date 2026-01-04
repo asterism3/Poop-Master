@@ -261,9 +261,11 @@ onAuthStateChanged(auth, async (user) => {
         
         // UI Updates
         document.getElementById('loginSection').classList.add('hidden');
+        document.getElementById('guestSection').classList.add('hidden');
         document.getElementById('userSection').classList.remove('hidden');
         document.getElementById('notificationSection').classList.remove('hidden');
         document.getElementById('userAvatar').src = user.photoURL;
+        document.getElementById('userName').textContent = user.displayName || 'User';
         document.getElementById('loginModal').classList.add('hidden');
         document.getElementById('loginModal').classList.remove('flex');
         
@@ -278,6 +280,7 @@ onAuthStateChanged(auth, async (user) => {
         if(unsubscribeNotifications) unsubscribeNotifications();
         
         document.getElementById('loginSection').classList.remove('hidden');
+        document.getElementById('guestSection').classList.remove('hidden');
         document.getElementById('userSection').classList.add('hidden');
         document.getElementById('notificationSection').classList.add('hidden');
         
