@@ -3,98 +3,319 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Poop Tracker</title>
+    <title>💩 Poop Tracker</title>
     <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=DynaPuff:wght@400..700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="style.css"> 
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" href="style.css">
 </head>
-<body class="text-stone-800 min-h-screen flex flex-col items-center py-10 px-4">
-
-    <!-- App Container -->
-    <div class="w-full max-w-md mx-auto space-y-8">
-        
-        <!-- Header -->
-        <header class="flex justify-between items-center mb-4 px-2">
-            <h1 class="text-2xl font-bold tracking-tight flex items-center gap-2 text-stone-800">
-                <span>Poop Tracker</span>
-                <span class="text-3xl">🧻</span>
-            </h1>
-            <div class="flex items-center gap-3">
-                <div id="authSection">
-                    <button id="googleLoginBtn" class="flex items-center gap-2 bg-white border border-stone-200 rounded-full px-3 py-1.5 text-xs font-medium text-stone-600 shadow-sm hover:bg-stone-50 transition-colors cursor-pointer">
-                        <svg class="w-4 h-4" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg>
-                        <span>Sign in</span>
-                    </button>
-                    <div id="userProfile" class="hidden flex items-center gap-2">
-                        <img id="userAvatar" src="" class="w-8 h-8 rounded-full border border-stone-200 bg-stone-100">
-                        <button id="logoutBtn" class="text-xs text-stone-400 hover:text-stone-600">Sign out</button>
-                    </div>
-                </div>
-            </div>
-        </header>
-
-        <!-- Main Content (Always visible now) -->
-        <div id="mainAppArea" class="space-y-8 transition-opacity">
-            
-            <div id="storageIndicator" class="text-center text-xs font-bold text-stone-400 uppercase tracking-widest">
-                Storage: <span id="storageType">Local Device</span>
-            </div>
-
-            <!-- Input Section -->
-            <div class="bg-white rounded-3xl shadow-xl p-8 text-center space-y-6 transform transition-all">
-                <div class="space-y-2">
-                    <div class="flex items-center justify-center gap-2">
-                        <h2 class="text-stone-400 font-medium uppercase tracking-wide text-xs">Bristol Stool Scale</h2>
-                    </div>
-                    <div id="emojiDisplay" class="text-8xl leading-none filter drop-shadow-md cursor-pointer transition-transform duration-200 hover:scale-105 py-2">💩</div>
-                    <div class="h-16 flex flex-col justify-center">
-                        <h3 id="typeTitle" class="text-2xl font-bold text-stone-800">Type 4</h3>
-                        <p id="typeDesc" class="text-stone-500 text-sm">Smooth sausage, like a snake</p>
-                    </div>
-                </div>
-
-                <!-- Slider -->
-                <div class="relative pt-4 pb-2">
-                    <input type="range" id="poopSlider" min="1" max="7" value="4" step="1">
-                    <div class="flex justify-between text-xs text-stone-300 font-bold mt-2 px-1">
-                        <span>1</span>
-                        <span>7</span>
-                    </div>
-                </div>
-
-                <!-- Action Button -->
-                <button id="logBtn" class="w-full bg-stone-900 text-white py-4 rounded-xl font-bold text-lg hover:bg-stone-700 active:scale-95 transition-all shadow-lg hover:shadow-xl flex items-center justify-center gap-2 cursor-pointer">
-                    <span>Log It</span>
-                    <span id="btnEmoji">👇</span>
+<body class="bg-amber-50 text-amber-900 min-h-screen pb-20 selection:bg-yellow-200">
+    
+    <!-- Share Bar -->
+    <div class="fixed top-0 left-0 right-0 bg-white/90 backdrop-blur-md z-50 border-b-4 border-amber-100">
+        <div class="max-w-3xl mx-auto px-4 py-2 flex items-center justify-between">
+            <div class="flex gap-2">
+                <!-- X.com -->
+                <button id="shareX" class="flex items-center gap-1.5 bg-black text-white px-3 py-1.5 rounded-full text-xs font-semibold hover:bg-gray-800 transition-colors">
+                    <svg class="w-3 h-3" viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+                    <span class="hidden sm:inline">Post</span>
+                </button>
+                
+                <!-- Instagram -->
+                <button id="shareInstagram" class="flex items-center gap-1.5 bg-gradient-to-tr from-yellow-400 via-orange-500 to-purple-600 text-white px-3 py-1.5 rounded-full text-xs font-semibold hover:opacity-90 transition-opacity">
+                    <svg class="w-3 h-3" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/></svg>
+                    <span class="hidden sm:inline">Story</span>
+                </button>
+                
+                <!-- SMS -->
+                <button id="shareSMS" class="flex items-center gap-1.5 bg-green-500 text-white px-3 py-1.5 rounded-full text-xs font-semibold hover:bg-green-600 transition-colors">
+                    <svg class="w-3 h-3" viewBox="0 0 24 24" fill="currentColor"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 14H5.17L4 17.17V4h16v12zM7 9h2v2H7zm4 0h2v2h-2zm4 0h2v2h-2z"/></svg>
+                    <span class="hidden sm:inline">SMS</span>
                 </button>
             </div>
 
-            <!-- Heatmap / Calendar Section -->
-            <div class="bg-white rounded-3xl shadow-lg p-6">
-                <div class="flex justify-between items-center mb-6">
-                    <h2 class="font-bold text-lg text-stone-800">This Month</h2>
-                    <div class="text-sm text-stone-500 font-medium" id="currentMonthLabel"></div>
+            <!-- Right Side: Notifications + Login/Profile -->
+            <div class="flex items-center gap-3">
+                <!-- Notification Bell (visible when logged in) -->
+                <div id="notificationSection" class="relative hidden">
+                    <button id="notificationBtn" class="relative p-2 rounded-full hover:bg-amber-50 transition-colors">
+                        <svg class="w-5 h-5 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"></path></svg>
+                        <!-- Notification Badge -->
+                        <span id="notificationBadge" class="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center animate-pulse">3</span>
+                    </button>
+                    
+                    <!-- Notification Dropdown -->
+                    <div id="notificationDropdown" class="hidden absolute right-0 top-full mt-2 w-80 bg-white rounded-2xl shadow-2xl border-2 border-amber-100 overflow-hidden z-50">
+                        <div class="p-3 bg-amber-50 border-b border-amber-100 flex items-center justify-between">
+                            <span class="font-bold text-amber-900 text-sm">Notifications</span>
+                            <button id="markAllRead" class="text-xs text-amber-600 hover:text-amber-800 font-medium">Mark all read</button>
+                        </div>
+                        <div id="notificationList" class="max-h-80 overflow-y-auto">
+                            <!-- Notifications will be inserted here -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Login Section -->
+                <div id="loginSection">
+                    <button id="googleLoginBtn" class="flex items-center gap-2 text-gray-600 hover:text-gray-900 bg-gray-50 hover:bg-gray-100 px-3 py-1.5 rounded-full transition-colors text-xs font-medium border border-gray-200">
+                        <svg class="w-3 h-3" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
+                        <span>Sign in</span>
+                    </button>
                 </div>
                 
-                <div class="grid grid-cols-7 gap-1 mb-2 text-center">
-                    <div class="text-xs text-stone-300">S</div><div class="text-xs text-stone-300">M</div><div class="text-xs text-stone-300">T</div><div class="text-xs text-stone-300">W</div><div class="text-xs text-stone-300">T</div><div class="text-xs text-stone-300">F</div><div class="text-xs text-stone-300">S</div>
+                <!-- User Profile Section (visible when logged in) -->
+                <div id="userSection" class="hidden">
+                    <div class="flex items-center gap-2">
+                        <img id="userAvatar" src="" alt="Avatar" class="w-8 h-8 rounded-full border-2 border-amber-200 cursor-pointer hover:border-amber-400 transition-colors">
+                        <button id="logoutBtn" class="text-xs text-gray-500 hover:text-gray-900 font-medium">Logout</button>
+                    </div>
                 </div>
-
-                <div id="calendarGrid" class="calendar-grid"></div>
-            </div>
-
-            <!-- Recent Logs List -->
-            <div class="space-y-3 pb-8">
-                <h2 class="text-sm font-bold text-stone-400 uppercase ml-2">Recent Logs</h2>
-                <div id="logsList" class="space-y-2"></div>
             </div>
         </div>
-
     </div>
 
-    <!-- FIREBASE & LOGIC -->
-    <script type="module" src="app.js"></script> 
+    <!-- Navigation Header -->
+    <div class="pt-16 pb-4">
+        <div class="max-w-md mx-auto px-6 text-center">
+            <nav class="inline-flex bg-white p-2 rounded-full border-2 border-amber-100 shadow-sm">
+                <button id="navTracker" class="px-6 py-2 rounded-full text-sm font-bold transition-all tab-active">Tracker</button>
+                <button id="navLeaderboard" class="px-6 py-2 rounded-full text-sm font-bold transition-all text-amber-500 hover:text-amber-700 hover:bg-amber-50">Leaderboard</button>
+            </nav>
+        </div>
+    </div>
+
+    <!-- TRACKER PAGE -->
+    <div id="trackerPage" class="page active">
+        <div class="max-w-md mx-auto px-6 py-6">
+            
+            <!-- Current Emoji Display -->
+            <div class="text-center mb-8 relative">
+                <div id="currentEmoji" class="text-9xl mb-4 inline-block drop-shadow-lg transition-transform duration-200">💩</div>
+                
+                <!-- Tooltip Trigger -->
+                <div class="tooltip-trigger inline-flex items-center justify-center gap-2 px-4 py-2 bg-orange-50 rounded-full text-orange-800 font-medium text-sm cursor-help hover:bg-orange-100 transition-colors">
+                    <span id="stageLabel">Type 4 - Normal</span>
+                    <svg class="w-4 h-4 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                    
+                    <!-- Tooltip -->
+                    <div class="tooltip absolute left-1/2 bottom-full mb-3 w-72 bg-white rounded-xl shadow-xl border border-gray-100 p-4 text-left z-20">
+                        <h4 class="font-bold text-gray-900 text-sm mb-1">Bristol Stool Scale</h4>
+                        <p class="text-xs text-gray-500 mb-2 leading-relaxed">
+                            A diagnostic medical tool classifying human faeces into seven categories.
+                        </p>
+                        <div class="text-xs space-y-1 mb-3">
+                            <div class="flex gap-2"><span class="font-bold text-orange-700">1-2</span> <span class="text-gray-500">Constipation</span></div>
+                            <div class="flex gap-2"><span class="font-bold text-green-600">3-4</span> <span class="text-gray-500">Ideal / Normal</span></div>
+                            <div class="flex gap-2"><span class="font-bold text-red-500">5-7</span> <span class="text-gray-500">Diarrhea / Urgency</span></div>
+                        </div>
+                        <a href="https://en.wikipedia.org/wiki/Bristol_stool_scale" target="_blank" class="text-xs text-orange-600 hover:text-orange-700 font-medium flex items-center gap-1">
+                            Wikipedia Reference →
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Range Slider -->
+            <div class="mb-10 px-2">
+                <input 
+                    type="range" 
+                    id="poopSlider" 
+                    min="1" 
+                    max="7" 
+                    value="4" 
+                    class="slider w-full h-4 bg-amber-100 rounded-full appearance-none cursor-pointer"
+                >
+                <div class="flex justify-between mt-3 text-xs font-bold text-amber-300">
+                    <span>1</span><span>2</span><span>3</span><span>4</span><span>5</span><span>6</span><span>7</span>
+                </div>
+            </div>
+
+            <!-- Log Button -->
+            <button 
+                id="logBtn"
+                class="primary-btn w-full py-4 bg-orange-500 hover:bg-orange-600 text-white text-xl font-black rounded-3xl mb-12 flex items-center justify-center gap-3 border-4 border-orange-600/20"
+            >
+                <span>LOG IT!</span>
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path></svg>
+            </button>
+
+            <!-- Stats -->
+            <div class="grid grid-cols-3 gap-4 mb-12">
+                <div class="text-center p-4 rounded-3xl bg-white border-b-4 border-amber-200">
+                    <div id="todayCount" class="text-4xl font-black text-amber-500">0</div>
+                    <div class="text-xs font-bold text-amber-300 uppercase tracking-wide mt-1">Today</div>
+                </div>
+                <div class="text-center p-4 rounded-3xl bg-white border-b-4 border-amber-200">
+                    <div id="weekCount" class="text-4xl font-black text-amber-500">0</div>
+                    <div class="text-xs font-bold text-amber-300 uppercase tracking-wide mt-1">Week</div>
+                </div>
+                <div class="text-center p-4 rounded-3xl bg-white border-b-4 border-amber-200">
+                    <div id="monthCount" class="text-4xl font-black text-amber-500">0</div>
+                    <div class="text-xs font-bold text-amber-300 uppercase tracking-wide mt-1">Month</div>
+                </div>
+            </div>
+
+            <!-- Heat Map -->
+            <div class="space-y-8">
+                <!-- Monthly -->
+                <div class="bg-white rounded-[2rem] border-4 border-amber-100 p-6">
+                    <div class="flex items-center justify-between mb-6">
+                        <button id="prevMonth" class="p-2 text-amber-300 hover:text-orange-600 transition-colors font-black text-xl">←</button>
+                        <h3 id="monthLabel" class="text-xl font-black text-amber-800">January 2025</h3>
+                        <button id="nextMonth" class="p-2 text-amber-300 hover:text-orange-600 transition-colors font-black text-xl">→</button>
+                    </div>
+
+                    <div class="grid grid-cols-7 gap-2 mb-2 text-center text-[10px] font-bold text-amber-300 uppercase tracking-wider">
+                        <div>S</div><div>M</div><div>T</div><div>W</div><div>T</div><div>F</div><div>S</div>
+                    </div>
+
+                    <div id="heatMap" class="grid grid-cols-7 gap-2"></div>
+                </div>
+
+                <!-- Yearly -->
+                <div class="bg-white rounded-[2rem] border-4 border-amber-100 p-6 overflow-hidden">
+                    <div class="flex items-center justify-between mb-4">
+                        <button id="prevYear" class="p-2 text-amber-300 hover:text-orange-600 transition-colors font-black text-xl">←</button>
+                        <h3 id="yearLabel" class="text-xl font-black text-amber-800">2025</h3>
+                        <button id="nextYear" class="p-2 text-amber-300 hover:text-orange-600 transition-colors font-black text-xl">→</button>
+                    </div>
+                    
+                    <div class="flex justify-between text-[10px] font-bold text-amber-300 uppercase mb-2 px-1">
+                        <span>Jan</span><span>Apr</span><span>Jul</span><span>Oct</span><span>Dec</span>
+                    </div>
+
+                    <div class="overflow-x-auto pb-2 scrollbar-hide">
+                        <div id="yearlyHeatMapGrid" class="flex gap-[3px] min-w-max mx-auto"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Recent Logs -->
+            <div class="mt-12">
+                <h3 class="text-sm font-bold text-amber-900 uppercase tracking-wide mb-4 pl-1">Recent Activity</h3>
+                <div id="recentLogs" class="space-y-3"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- LEADERBOARD PAGE -->
+    <div id="leaderboardPage" class="page">
+        <div class="max-w-md mx-auto px-6 py-6">
+            
+            <div class="text-center mb-8">
+                <h2 class="text-3xl font-black text-amber-900 tracking-tight">Leaderboard</h2>
+                <p class="text-amber-500 font-bold text-sm">Community Rankings</p>
+            </div>
+
+            <!-- Tabs -->
+            <div class="flex justify-center gap-2 mb-8 bg-white p-2 rounded-2xl w-max mx-auto border-2 border-amber-100">
+                <button id="tabToday" class="leaderboard-tab px-4 py-1.5 rounded-xl text-sm font-bold transition-all tab-active">Today</button>
+                <button id="tabMonth" class="leaderboard-tab px-4 py-1.5 rounded-xl text-sm font-bold transition-all text-amber-400 hover:text-amber-700 hover:bg-amber-50">Month</button>
+                <button id="tabYear" class="leaderboard-tab px-4 py-1.5 rounded-xl text-sm font-bold transition-all text-amber-400 hover:text-amber-700 hover:bg-amber-50">Year</button>
+            </div>
+
+            <!-- List -->
+            <div id="leaderboardList" class="space-y-3"></div>
+        </div>
+    </div>
+
+    <!-- Global Footer -->
+    <div class="py-10 text-center border-t border-amber-100 mt-10">
+        <div class="flex items-center justify-center gap-2 text-amber-400 text-sm font-bold">
+            <span>Made with 🥨 2026 @asterlite</span>
+            <a href="https://github.com/asterlite" target="_blank" class="hover:text-gray-800 transition-colors">
+                <svg class="w-4 h-4" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/></svg>
+            </a>
+        </div>
+    </div>
+
+    <!-- USER DASHBOARD MODAL -->
+    <div id="userDashboardModal" class="fixed inset-0 bg-amber-900/40 backdrop-blur-sm z-50 hidden items-center justify-center overflow-y-auto py-10">
+        <div class="bg-white rounded-[2rem] p-8 max-w-lg w-full mx-4 shadow-2xl border-4 border-amber-100 relative my-auto">
+            <button id="closeDashboard" class="absolute top-6 right-6 p-2 rounded-full hover:bg-amber-100 text-amber-300 hover:text-amber-900 transition-colors">
+                <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M6 18L18 6M6 6l12 12"></path></svg>
+            </button>
+            
+            <div class="text-center mb-8">
+                <div class="relative inline-block">
+                    <img id="dashboardAvatar" src="" alt="Avatar" class="w-24 h-24 rounded-full border-4 border-amber-50 shadow-lg">
+                    <div class="absolute -bottom-2 -right-2 bg-white rounded-full p-2 shadow-md border border-amber-100">
+                        <span class="text-2xl">👑</span>
+                    </div>
+                </div>
+                <h3 id="dashboardName" class="text-3xl font-black text-amber-900 mt-4 tracking-tight"></h3>
+                <div id="dashboardStats" class="flex justify-center gap-4 mt-3 text-sm text-gray-500 font-bold">
+                    <span class="bg-amber-50 px-4 py-1.5 rounded-xl border border-amber-100"><span id="dashTotalPoops" class="text-orange-600 font-black">0</span> Logs</span>
+                    <span class="bg-orange-50 px-4 py-1.5 rounded-xl text-orange-700 border border-orange-100"><span id="dashStreak" class="font-black">0</span> Streak 🔥</span>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
+                <div class="bg-white rounded-3xl p-4 border-2 border-amber-100 shadow-sm">
+                    <canvas id="lineChart" height="150"></canvas>
+                </div>
+                <div class="bg-white rounded-3xl p-4 border-2 border-amber-100 shadow-sm">
+                    <canvas id="pieChart" height="150"></canvas>
+                </div>
+            </div>
+
+            <div class="text-center mb-8">
+                <h4 class="text-xs font-bold text-amber-300 uppercase tracking-wide mb-4">React</h4>
+                <div class="flex justify-center gap-3">
+                    <button class="reaction-btn text-4xl p-2 hover:bg-amber-50 rounded-2xl transition-colors" data-reaction="💩">💩</button>
+                    <button class="reaction-btn text-4xl p-2 hover:bg-amber-50 rounded-2xl transition-colors" data-reaction="🔥">🔥</button>
+                    <button class="reaction-btn text-4xl p-2 hover:bg-amber-50 rounded-2xl transition-colors" data-reaction="👑">👑</button>
+                    <button class="reaction-btn text-4xl p-2 hover:bg-amber-50 rounded-2xl transition-colors" data-reaction="💪">💪</button>
+                    <button class="reaction-btn text-4xl p-2 hover:bg-amber-50 rounded-2xl transition-colors" data-reaction="🎉">🎉</button>
+                </div>
+                <div id="reactionCounts" class="flex justify-center gap-4 mt-3 text-xs text-amber-400 font-bold"></div>
+            </div>
+
+            <div class="flex gap-3 mb-8">
+                <button id="remindBtn" class="flex-1 py-4 bg-gray-900 text-white text-base font-bold rounded-2xl hover:bg-gray-800 transition-all flex items-center justify-center gap-2 shadow-lg shadow-gray-900/20 active:scale-95">
+                    <span>🔔</span> Remind
+                </button>
+                <button id="shareBtn" class="flex-1 py-4 bg-orange-500 text-white text-base font-bold rounded-2xl hover:bg-orange-600 transition-all flex items-center justify-center gap-2 shadow-lg shadow-orange-500/20 active:scale-95">
+                    <span>📤</span> Share
+                </button>
+            </div>
+
+            <div class="border-t-2 border-amber-50 pt-6">
+                <h4 class="text-xs font-bold text-amber-300 uppercase tracking-wide mb-4">Comments</h4>
+                <div class="flex gap-2 mb-4">
+                    <input id="commentInput" type="text" placeholder="Add a comment..." class="flex-1 px-4 py-3 rounded-2xl bg-amber-50 border-2 border-transparent focus:border-amber-300 focus:bg-white transition-all text-sm font-bold text-amber-900 placeholder-amber-300 outline-none">
+                    <button id="postComment" class="px-6 py-3 bg-amber-200 text-amber-800 font-bold rounded-2xl hover:bg-amber-300 transition-colors text-sm shadow-sm">Post</button>
+                </div>
+                <div id="commentsList" class="space-y-3 max-h-48 overflow-y-auto pr-2"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast -->
+    <div id="toast" class="fixed bottom-8 left-1/2 -translate-x-1/2 bg-gray-900 text-white px-8 py-4 rounded-2xl shadow-xl opacity-0 transition-all duration-300 pointer-events-none z-50 text-base font-bold flex items-center gap-2 transform translate-y-4 border-2 border-white/20">
+        <span>Logged successfully!</span> 💩
+    </div>
+
+    <!-- Google Login Modal -->
+    <div id="loginModal" class="fixed inset-0 bg-white/90 backdrop-blur-sm z-50 hidden items-center justify-center">
+        <div class="bg-white rounded-3xl p-8 max-w-sm mx-4 shadow-2xl border border-gray-100 w-full text-center">
+            <div class="w-16 h-16 bg-orange-100 rounded-full flex items-center justify-center text-3xl mx-auto mb-4">💩</div>
+            <h3 class="text-xl font-bold text-gray-900 mb-2">Welcome Back</h3>
+            <p class="text-gray-500 text-sm mb-8">Sign in to sync your logs</p>
+            
+            <button id="googleSignInModal" class="w-full flex items-center justify-center gap-3 bg-white border border-gray-200 hover:bg-gray-50 px-6 py-3.5 rounded-xl transition-all mb-3">
+                <svg class="w-5 h-5" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
+                <span class="text-gray-700 font-medium text-sm">Continue with Google</span>
+            </button>
+            <button id="closeLoginModal" class="text-gray-400 hover:text-gray-600 text-sm font-medium">Cancel</button>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+    <script type="module" src="app.js"></script>
+
+ 
 </body>
 </html>

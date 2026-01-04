@@ -1,9 +1,8 @@
-// app.js
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
 import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-import { getFirestore, collection, addDoc, query, where, onSnapshot, orderBy, doc, deleteDoc, setDoc, increment, limit, getDocs } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+import { getFirestore, collection, addDoc, query, where, onSnapshot, orderBy, doc, deleteDoc, limit } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-// CONFIG
+// --- FIREBASE CONFIG ---
 const firebaseConfig = {
     apiKey: "AIzaSyBTs8gWw2AVxW8prGSdQPe6760f6UcgZIk",
     authDomain: "poopmaster-f3d8a.firebaseapp.com",
@@ -19,252 +18,535 @@ const auth = getAuth(app);
 const db = getFirestore(app);
 const provider = new GoogleAuthProvider();
 
-// --- Data ---
-const bristolScale = {
-    1: { emoji: '🪨', title: 'Type 1', desc: 'Separate hard lumps, like nuts' },
-    2: { emoji: '🍇', title: 'Type 2', desc: 'Sausage-shaped, but lumpy' },
-    3: { emoji: '🌽', title: 'Type 3', desc: 'Sausage-like but cracked' },
-    4: { emoji: '🌭', title: 'Type 4', desc: 'Smooth sausage, like a snake' },
-    5: { emoji: '🍗', title: 'Type 5', desc: 'Soft blobs with clear edges' },
-    6: { emoji: '🍦', title: 'Type 6', desc: 'Mushy stool, ragged edges' },
-    7: { emoji: '🌊', title: 'Type 7', desc: 'Watery, no solid pieces' }
+// --- STATE MANAGEMENT ---
+let currentUser = null;
+let unsubscribe = null; // To stop listening when logging out
+let localLogs = []; // Global store for current logs
+
+// Data Constants
+const poopTypes = {
+    1: { emoji: '🥜', label: 'Type 1', desc: 'Hard lumps', color: '#78350f' },
+    2: { emoji: '🌰', label: 'Type 2', desc: 'Lumpy sausage', color: '#92400e' },
+    3: { emoji: '🌭', label: 'Type 3', desc: 'Cracked surface', color: '#b45309' },
+    4: { emoji: '💩', label: 'Type 4', desc: 'Normal smooth', color: '#d97706' },
+    5: { emoji: '🍦', label: 'Type 5', desc: 'Soft blobs', color: '#f59e0b' },
+    6: { emoji: '☁️', label: 'Type 6', desc: 'Mushy', color: '#fbbf24' },
+    7: { emoji: '💧', label: 'Type 7', desc: 'Watery', color: '#fcd34d' }
 };
 
-let currentType = 4;
-let logs = []; 
-let currentUser = null;
-let unsubscribe = null; 
+const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+let currentMonth = new Date().getMonth();
+let currentYear = new Date().getFullYear();
+let displayYear = new Date().getFullYear();
+let currentLeaderboardTab = 'today';
+let selectedUserId = null;
+let lineChartInstance = null;
+let pieChartInstance = null;
 
-// --- DOM Elements ---
-const slider = document.getElementById('poopSlider');
-const emojiDisplay = document.getElementById('emojiDisplay');
-const typeTitle = document.getElementById('typeTitle');
-const typeDesc = document.getElementById('typeDesc');
-const logBtn = document.getElementById('logBtn');
-const calendarGrid = document.getElementById('calendarGrid');
-const logsList = document.getElementById('logsList');
+// --- AUTHENTICATION ---
 const googleLoginBtn = document.getElementById('googleLoginBtn');
-const userProfile = document.getElementById('userProfile');
-const userAvatar = document.getElementById('userAvatar');
+const googleSignInModal = document.getElementById('googleSignInModal');
 const logoutBtn = document.getElementById('logoutBtn');
-const storageIndicator = document.getElementById('storageType');
 
-// --- Init ---
-function init() {
-    updateUI(currentType);
-    const now = new Date();
-    document.getElementById('currentMonthLabel').innerText = now.toLocaleString('default', { month: 'long', year: 'numeric' });
-    
-    // Default to loading local data first
-    loadLocalData();
-}
-
-// --- Auth Logic ---
-googleLoginBtn.addEventListener('click', () => {
+// Login Function
+const loginUser = () => {
     signInWithPopup(auth, provider).catch(err => {
-        alert("Login Error: " + err.message + "\nCheck console for details.");
-        console.error(err);
+        console.error("Login Error:", err);
+        alert("Login failed. See console.");
     });
-});
+};
 
-logoutBtn.addEventListener('click', () => {
-    signOut(auth);
-});
+// Logout Function
+const logoutUser = () => {
+    signOut(auth).then(() => {
+        // UI cleanup handled by onAuthStateChanged
+        console.log("Signed out");
+    });
+};
 
+// Listeners
+if(googleLoginBtn) googleLoginBtn.addEventListener('click', loginUser);
+if(googleSignInModal) googleSignInModal.addEventListener('click', loginUser);
+if(logoutBtn) logoutBtn.addEventListener('click', logoutUser);
+
+// Auth State Monitor
 onAuthStateChanged(auth, (user) => {
     if (user) {
+        // User Logged In
         currentUser = user;
-        userAvatar.src = user.photoURL;
-        googleLoginBtn.classList.add('hidden');
-        userProfile.classList.remove('hidden');
-        storageIndicator.innerText = "Cloud (Firebase)";
-        storageIndicator.classList.add('text-green-500');
+        
+        // UI Updates
+        document.getElementById('loginSection').classList.add('hidden');
+        document.getElementById('userSection').classList.remove('hidden');
+        document.getElementById('notificationSection').classList.remove('hidden');
+        document.getElementById('userAvatar').src = user.photoURL;
+        document.getElementById('loginModal').classList.add('hidden');
+        document.getElementById('loginModal').classList.remove('flex');
+        
+        // Start Listening to Firestore
         setupRealtimeListener(user.uid);
     } else {
+        // User Logged Out
         currentUser = null;
-        if(unsubscribe) unsubscribe(); 
-        userProfile.classList.add('hidden');
-        googleLoginBtn.classList.remove('hidden');
-        storageIndicator.innerText = "Local Device";
-        storageIndicator.classList.remove('text-green-500');
+        if(unsubscribe) unsubscribe(); // Stop listening to DB
+        
+        // UI Updates
+        document.getElementById('loginSection').classList.remove('hidden');
+        document.getElementById('userSection').classList.add('hidden');
+        document.getElementById('notificationSection').classList.add('hidden');
+        
+        // Fallback to LocalStorage
         loadLocalData();
     }
 });
 
-// --- Data Handling (Hybrid) ---
+// --- DATA HANDLING (Hybrid: Firestore + LocalStorage) ---
 
-logBtn.addEventListener('click', async () => {
-    if(currentUser) {
-        try {
-            await addDoc(collection(db, "logs"), {
-                uid: currentUser.uid,
-                type: currentType,
-                timestamp: new Date()
-            });
-            triggerButtonAnimation();
-        } catch (e) { console.error(e); }
-    } else {
-        const newLog = {
-            id: Date.now(),
-            type: currentType,
-            timestamp: new Date().toISOString()
-        };
-        const currentLocal = JSON.parse(localStorage.getItem('poopLogs')) || [];
-        currentLocal.unshift(newLog);
-        localStorage.setItem('poopLogs', JSON.stringify(currentLocal));
-        triggerButtonAnimation();
-        loadLocalData();
-    }
-});
-
-window.deleteLog = async function(id) {
-    if(!confirm('Delete this entry?')) return;
-    if (typeof id === 'string') {
-        try { await deleteDoc(doc(db, "logs", id)); } catch(e) { console.error(e); }
-    } else {
-        let local = JSON.parse(localStorage.getItem('poopLogs')) || [];
-        local = local.filter(l => l.id !== id);
-        localStorage.setItem('poopLogs', JSON.stringify(local));
-        loadLocalData();
-    }
-};
-
-function loadLocalData() {
-    const stored = JSON.parse(localStorage.getItem('poopLogs')) || [];
-    logs = stored.map(l => ({
-        id: l.id,
-        type: l.type,
-        dateObj: new Date(l.timestamp)
-    }));
-    updateAllViews();
-}
-
+// 1. Fetching Data
 function setupRealtimeListener(uid) {
     const q = query(
         collection(db, "logs"), 
         where("uid", "==", uid),
         orderBy("timestamp", "desc"),
-        limit(20) // Optimization: Only fetch the last 20, not the whole history!
+        limit(500) // Limit to prevent massive reads
     );
 
     unsubscribe = onSnapshot(q, (snapshot) => {
-        logs = [];
+        localLogs = [];
         snapshot.forEach((doc) => {
             const data = doc.data();
-            // Handle timestamp safely (it might be null briefly on local writes)
-            const dateObj = data.timestamp ? data.timestamp.toDate() : new Date();
-            
-            logs.push({
-                id: doc.id, 
+            localLogs.push({
+                id: doc.id,
                 ...data,
-                dateObj: dateObj 
+                date: data.timestamp ? data.timestamp.toDate().toISOString() : new Date().toISOString()
             });
         });
-        updateAllViews();
+        refreshAllViews();
     }, (error) => {
-        // --- THIS IS CRITICAL ---
-        // If an index is missing, this will print a link in your browser console.
-        // Click that link to auto-create the index.
-        console.error("Firebase Query Error:", error);
+        console.error("Firestore Error:", error);
     });
 }
 
-// --- UI Rendering ---
-function updateAllViews() {
-    renderCalendar();
+function loadLocalData() {
+    localLogs = JSON.parse(localStorage.getItem('poopLogs') || '[]');
+    refreshAllViews();
+}
+
+// 2. Saving Data
+async function saveLog(type) {
+    if (currentUser) {
+        // Save to Cloud
+        try {
+            await addDoc(collection(db, "logs"), {
+                uid: currentUser.uid,
+                type: type,
+                timestamp: new Date()
+            });
+            // Note: UI updates automatically via onSnapshot
+        } catch (e) { console.error("Error adding doc: ", e); }
+    } else {
+        // Save to Local
+        localLogs.unshift({ date: new Date().toISOString(), type: type });
+        localStorage.setItem('poopLogs', JSON.stringify(localLogs));
+        refreshAllViews();
+    }
+}
+
+// --- UI UPDATES (The logic from your first script) ---
+
+function refreshAllViews() {
+    updateStats();
+    renderHeatMap();
+    renderYearlyHeatMap();
     renderRecentLogs();
+    renderLeaderboard(); // Update to show current user stats
 }
 
-function updateUI(type) {
-    const data = bristolScale[type];
-    emojiDisplay.innerText = data.emoji;
-    typeTitle.innerText = data.title;
-    typeDesc.innerText = data.desc;
-}
+function updateStats() {
+    const logs = localLogs;
+    const now = new Date();
+    const today = now.toDateString();
+    const weekAgo = new Date(now - 604800000);
+    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
 
-function triggerEmojiAnimation() {
-    emojiDisplay.classList.remove('emoji-pop');
-    void emojiDisplay.offsetWidth; 
-    emojiDisplay.classList.add('emoji-pop');
+    document.getElementById('todayCount').textContent = logs.filter(l => new Date(l.date).toDateString() === today).length;
+    document.getElementById('weekCount').textContent = logs.filter(l => new Date(l.date) >= weekAgo).length;
+    document.getElementById('monthCount').textContent = logs.filter(l => new Date(l.date) >= monthStart).length;
 }
-
-function triggerButtonAnimation() {
-    logBtn.innerText = "Logged!";
-    logBtn.classList.add("bg-green-600");
-    logBtn.classList.remove("bg-stone-900");
-    setTimeout(() => {
-        logBtn.innerHTML = `<span>Log It</span><span id="btnEmoji">👇</span>`;
-        logBtn.classList.remove("bg-green-600");
-        logBtn.classList.add("bg-stone-900");
-    }, 1000);
-}
-
-slider.addEventListener('input', (e) => {
-    currentType = parseInt(e.target.value);
-    updateUI(currentType);
-    triggerEmojiAnimation();
-});
 
 function renderRecentLogs() {
-    logsList.innerHTML = '';
-    const recent = logs.slice(0, 5);
-    if (recent.length === 0) {
-        logsList.innerHTML = '<div class="text-center text-stone-300 text-sm py-4 italic">No logs yet.</div>';
-        return;
+    const logs = localLogs.slice(0, 5);
+    const container = document.getElementById('recentLogs');
+    container.innerHTML = logs.length ? logs.map(l => {
+        const d = new Date(l.date);
+        const t = poopTypes[l.type] || poopTypes[4]; // Fallback
+        return `
+            <div class="flex items-center justify-between bg-white border-b-4 border-amber-100 rounded-3xl p-4 hover:border-amber-200 transition-colors">
+                <div class="flex items-center gap-4">
+                    <div class="w-12 h-12 bg-amber-50 rounded-2xl flex items-center justify-center text-2xl">${t.emoji}</div>
+                    <div>
+                        <div class="font-black text-amber-900 text-sm">${t.label}</div>
+                        <div class="text-xs font-bold text-amber-400">${t.desc}</div>
+                    </div>
+                </div>
+                <div class="text-xs font-bold text-amber-300">${d.toLocaleDateString([], {month:'short', day:'numeric'})}</div>
+            </div>
+        `;
+    }).join('') : '<div class="text-amber-300 text-center text-sm py-4 font-bold">No logs yet. Start pooping!</div>';
+}
+
+function renderHeatMap() {
+    const logs = localLogs;
+    const container = document.getElementById('heatMap');
+    document.getElementById('monthLabel').textContent = `${months[currentMonth]} ${currentYear}`;
+    
+    const firstDay = new Date(currentYear, currentMonth, 1).getDay();
+    const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
+    const dayCounts = {};
+    
+    logs.forEach(l => {
+        const d = new Date(l.date);
+        if (d.getMonth() === currentMonth && d.getFullYear() === currentYear) {
+            dayCounts[d.getDate()] = (dayCounts[d.getDate()]||0) + 1;
+        }
+    });
+
+    let html = '';
+    for(let i=0; i<firstDay; i++) html += '<div></div>';
+    for(let i=1; i<=daysInMonth; i++) {
+        const c = dayCounts[i] || 0;
+        let color = 'bg-gray-50 text-gray-400';
+        if (c===1) color = 'bg-orange-200 text-orange-800';
+        if (c===2) color = 'bg-orange-300 text-orange-900';
+        if (c>=3) color = 'bg-orange-500 text-white';
+        
+        const isToday = i === new Date().getDate() && currentMonth === new Date().getMonth() && currentYear === new Date().getFullYear();
+        
+        html += `<div class="heat-cell aspect-square ${color} rounded-lg flex items-center justify-center text-xs font-bold ${isToday ? 'ring-4 ring-orange-400 ring-offset-2' : ''}">${i}</div>`;
     }
-    recent.forEach(log => {
-        const date = log.dateObj;
-        const info = bristolScale[log.type];
-        const idParam = typeof log.id === 'string' ? `'${log.id}'` : log.id;
-        const div = document.createElement('div');
-        div.className = 'bg-white p-4 rounded-2xl shadow-sm flex items-center justify-between border border-stone-100';
-        div.innerHTML = `
-            <div class="flex items-center gap-4">
-                <span class="text-3xl">${info.emoji}</span>
-                <div>
-                    <div class="font-bold text-stone-700">Type ${log.type}</div>
-                    <div class="text-xs text-stone-400 font-medium">${date.toLocaleDateString()} &bull; ${date.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</div>
+    container.innerHTML = html;
+}
+
+function renderYearlyHeatMap() {
+    const logs = localLogs;
+    const container = document.getElementById('yearlyHeatMapGrid');
+    document.getElementById('yearLabel').textContent = displayYear;
+
+    const counts = {};
+    logs.forEach(l => {
+        const d = new Date(l.date);
+        if (d.getFullYear() === displayYear) counts[d.toDateString()] = (counts[d.toDateString()]||0)+1;
+    });
+
+    const start = new Date(displayYear, 0, 1);
+    while(start.getDay()!==0) start.setDate(start.getDate()-1);
+    
+    let html = '';
+    let curr = new Date(start);
+    // 53 weeks roughly
+    for(let w=0; w<53; w++) {
+        html += '<div class="flex flex-col gap-[3px]">';
+        for(let d=0; d<7; d++) {
+            const c = counts[curr.toDateString()] || 0;
+            const inYear = curr.getFullYear() === displayYear;
+            let color = 'bg-gray-100';
+            if (inYear) {
+                if (c===0) color = 'bg-gray-100';
+                else if (c===1) color = 'bg-orange-200';
+                else if (c===2) color = 'bg-orange-300';
+                else color = 'bg-orange-500';
+            } else {
+                color = 'bg-transparent';
+            }
+            html += `<div class="yearly-cell ${color}" title="${curr.toLocaleDateString()}: ${c}"></div>`;
+            curr.setDate(curr.getDate()+1);
+        }
+        html += '</div>';
+    }
+    container.innerHTML = html;
+}
+
+// --- INTERACTION HANDLERS ---
+
+document.getElementById('poopSlider').addEventListener('input', (e) => {
+    const t = poopTypes[e.target.value];
+    document.getElementById('currentEmoji').textContent = t.emoji;
+    document.getElementById('stageLabel').textContent = `${t.label} - ${t.desc}`;
+});
+
+document.getElementById('logBtn').addEventListener('click', () => {
+    const type = parseInt(document.getElementById('poopSlider').value);
+    
+    saveLog(type); // Uses the new Async/Hybrid function
+    
+    // UI Feedback
+    const t = document.getElementById('toast');
+    t.classList.remove('opacity-0', 'translate-y-4');
+    setTimeout(() => t.classList.add('opacity-0', 'translate-y-4'), 2000);
+});
+
+// Heatmap Navigation
+document.getElementById('prevMonth').addEventListener('click', () => {
+    currentMonth--; if(currentMonth<0){currentMonth=11; currentYear--;} renderHeatMap();
+});
+document.getElementById('nextMonth').addEventListener('click', () => {
+    currentMonth++; if(currentMonth>11){currentMonth=0; currentYear++;} renderHeatMap();
+});
+document.getElementById('prevYear').addEventListener('click', () => { displayYear--; renderYearlyHeatMap(); });
+document.getElementById('nextYear').addEventListener('click', () => { displayYear++; renderYearlyHeatMap(); });
+
+// Page Navigation (Tabs)
+const pages = ['trackerPage', 'leaderboardPage'];
+const navs = ['navTracker', 'navLeaderboard'];
+
+navs.forEach((id, idx) => {
+    document.getElementById(id).addEventListener('click', () => {
+        pages.forEach(p => document.getElementById(p).classList.remove('active'));
+        navs.forEach(n => {
+            const el = document.getElementById(n);
+            el.classList.remove('tab-active');
+            el.classList.add('text-gray-500', 'hover:text-gray-900');
+        });
+        
+        document.getElementById(pages[idx]).classList.add('active');
+        document.getElementById(id).classList.add('tab-active');
+        document.getElementById(id).classList.remove('text-gray-500', 'hover:text-gray-900');
+        
+        if(idx === 1) renderLeaderboard();
+    });
+});
+
+// --- LEADERBOARD LOGIC (Sample Data + Real User Integration) ---
+// Init Data
+if (!localStorage.getItem('sampleUsers_v3')) {
+    localStorage.setItem('sampleUsers', JSON.stringify([
+        { id: 'u1', name: 'Poopy Pete', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Pete', logs: generateLogs(145), reactions: {'💩':24,'🔥':18}, comments: [{user:'Sarah',avatar:'https://api.dicebear.com/7.x/avataaars/svg?seed=S',text:'Legend! 💩',time:'2h'}] },
+        { id: 'u2', name: 'Bowel Betty', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Betty', logs: generateLogs(120), reactions: {'🔥':22}, comments: [] },
+        { id: 'u3', name: 'Toilet Tim', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Tim', logs: generateLogs(98), reactions: {'👑':5}, comments: [] },
+        { id: 'u4', name: 'Dookie Dave', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Dave', logs: generateLogs(85), reactions: {'💪':9}, comments: [] },
+        { id: 'u5', name: 'Stool Sally', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Sally', logs: generateLogs(70), reactions: {'🎉':9}, comments: [] }
+    ]));
+    localStorage.setItem('sampleUsers_v3', 'true');
+}
+
+function getSampleUsers() { return JSON.parse(localStorage.getItem('sampleUsers')); }
+function generateLogs(count) {
+    const logs = [];
+    const now = new Date();
+    for(let i=0; i<count; i++) {
+        const d = new Date(now);
+        d.setDate(d.getDate() - Math.floor(Math.random()*60));
+        logs.push({ date: d.toISOString(), type: Math.floor(Math.random()*7)+1 });
+    }
+    return logs.sort((a,b) => new Date(b.date) - new Date(a.date));
+}
+
+function renderLeaderboard() {
+    // Merge Sample Users with Current Real User
+    let users = getSampleUsers();
+    
+    // Create a temporary user object for the logged in user to show on leaderboard
+    const myself = {
+        id: currentUser ? currentUser.uid : 'local_user',
+        name: currentUser ? currentUser.displayName : 'You',
+        avatar: currentUser ? currentUser.photoURL : 'https://ui-avatars.com/api/?name=You&background=random',
+        logs: localLogs, // Use the real logs (from Firestore or Local)
+        reactions: {'⭐': 0},
+        comments: []
+    };
+    
+    users.push(myself);
+
+    const now = new Date();
+    
+    const ranked = users.map(u => {
+        let count = 0;
+        u.logs.forEach(l => {
+            const d = new Date(l.date);
+            if (currentLeaderboardTab === 'today') { if(d.toDateString() === now.toDateString()) count++; }
+            else if (currentLeaderboardTab === 'month') { if(d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear()) count++; }
+            else { if(d.getFullYear() === now.getFullYear()) count++; }
+        });
+        return {...u, count};
+    }).sort((a,b) => b.count - a.count);
+
+    document.getElementById('leaderboardList').innerHTML = ranked.map((u, i) => {
+        let rank = `<span class="text-amber-300 font-bold">#${i+1}</span>`;
+        if(i===0) rank = '🥇'; if(i===1) rank = '🥈'; if(i===2) rank = '🥉';
+        
+        // Highlight current user
+        const isMe = u.id === myself.id;
+        const bgClass = isMe ? 'bg-orange-50 border-orange-200' : 'bg-white border-amber-100';
+
+        return `
+            <div class="fun-btn flex items-center gap-4 ${bgClass} p-4 rounded-3xl border-2 cursor-pointer hover:border-amber-300 transition-colors" onclick="openUserDashboard('${u.id}')">
+                <div class="w-8 text-center text-2xl">${rank}</div>
+                <img src="${u.avatar}" class="w-12 h-12 rounded-full bg-amber-50 border-2 border-amber-100">
+                <div class="flex-1">
+                    <div class="font-black text-amber-900 text-base">${u.name} ${isMe ? '(You)' : ''}</div>
+                    <div class="text-xs font-bold text-amber-400">${Object.values(u.reactions).reduce((a,b)=>a+b,0)} reactions</div>
+                </div>
+                <div class="text-right">
+                    <div class="text-2xl font-black text-orange-500">${u.count}</div>
+                    <div class="text-[10px] font-bold text-amber-300 uppercase">Poops</div>
                 </div>
             </div>
-            <button onclick="window.deleteLog(${idParam})" class="text-stone-300 hover:text-red-500 hover:bg-red-50 p-2 rounded-full transition-colors">
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
-            </button>`;
-        logsList.appendChild(div);
+        `;
+    }).join('');
+}
+
+// Leaderboard Tabs
+['tabToday', 'tabMonth', 'tabYear'].forEach(id => {
+    document.getElementById(id).addEventListener('click', (e) => {
+        document.querySelectorAll('.leaderboard-tab').forEach(t => {
+            t.classList.remove('tab-active');
+            t.classList.add('text-gray-600', 'hover:text-gray-900');
+        });
+        e.target.classList.add('tab-active');
+        e.target.classList.remove('text-gray-600');
+        currentLeaderboardTab = id.replace('tab','').toLowerCase();
+        renderLeaderboard();
     });
+});
+
+// Dashboard & Modal Logic
+window.openUserDashboard = (uid) => {
+    // We need to look in both sample users and the current user
+    let user;
+    if (currentUser && uid === currentUser.uid) {
+        user = {
+            id: currentUser.uid,
+            name: currentUser.displayName,
+            avatar: currentUser.photoURL,
+            logs: localLogs,
+            reactions: {},
+            comments: []
+        };
+    } else if (!currentUser && uid === 'local_user') {
+         user = { id: 'local', name: 'You', avatar: '', logs: localLogs, reactions:{}, comments:[] };
+    } else {
+        user = getSampleUsers().find(u => u.id === uid);
+    }
+    
+    if(!user) return;
+    selectedUserId = uid;
+
+    document.getElementById('dashboardName').textContent = user.name;
+    document.getElementById('dashboardAvatar').src = user.avatar || 'https://ui-avatars.com/api/?name=You';
+    document.getElementById('dashTotalPoops').textContent = user.logs.length;
+    document.getElementById('dashStreak').textContent = calculateStreak(user.logs);
+    
+    // Charts
+    if(lineChartInstance) lineChartInstance.destroy();
+    const ctxL = document.getElementById('lineChart').getContext('2d');
+    const lData = [];
+    for(let i=6; i>=0; i--) {
+        const d = new Date(); d.setDate(d.getDate()-i);
+        lData.push(user.logs.filter(l => new Date(l.date).toDateString() === d.toDateString()).length);
+    }
+    lineChartInstance = new Chart(ctxL, {
+        type: 'bar',
+        data: {
+            labels: ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'], 
+            datasets: [{label:'Logs', data:lData, backgroundColor:'#f97316', borderRadius:4}]
+        },
+        options: { responsive:true, plugins:{legend:{display:false}}, scales:{x:{grid:{display:false}}, y:{display:false}} }
+    });
+
+    if(pieChartInstance) pieChartInstance.destroy();
+    const ctxP = document.getElementById('pieChart').getContext('2d');
+    const pCounts = {};
+    user.logs.forEach(l => pCounts[l.type] = (pCounts[l.type]||0)+1);
+    pieChartInstance = new Chart(ctxP, {
+        type: 'doughnut',
+        data: {
+            labels: Object.values(poopTypes).map(t=>t.emoji),
+            datasets: [{ data:Object.values(pCounts), backgroundColor:Object.values(poopTypes).map(t=>t.color), borderWidth:0 }]
+        },
+        options: { responsive:true, plugins:{legend:{display:false}} }
+    });
+
+    renderReactions(user.reactions || {});
+    renderComments(user.comments || []);
+    
+    const m = document.getElementById('userDashboardModal');
+    m.classList.remove('hidden');
+    m.classList.add('flex');
+    setTimeout(()=>m.classList.add('opacity-100'), 10);
+};
+
+function calculateStreak(logs) {
+    // Simple mock streak logic for visual appeal
+    return logs.length ? Math.floor(Math.random() * 5) + 1 : 0; 
 }
 
-function renderCalendar() {
-    calendarGrid.innerHTML = '';
-    const now = new Date();
-    const year = now.getFullYear();
-    const month = now.getMonth(); 
-    const daysInMonth = new Date(year, month + 1, 0).getDate();
-    const startOffset = new Date(year, month, 1).getDay();
-
-    for (let i = 0; i < startOffset; i++) {
-        calendarGrid.appendChild(Object.assign(document.createElement('div'), {className: 'calendar-day opacity-0'}));
-    }
-
-    for (let day = 1; day <= daysInMonth; day++) {
-        const cell = document.createElement('div');
-        cell.className = 'calendar-day bg-stone-100 text-stone-400'; 
-        cell.innerText = day;
-        const currentDayStart = new Date(year, month, day);
-        const currentDayEnd = new Date(year, month, day + 1);
-        const dayLogs = logs.filter(log => log.dateObj >= currentDayStart && log.dateObj < currentDayEnd);
-
-        if (dayLogs.length > 0) {
-            let intensityClass = 'intensity-1';
-            if (dayLogs.length === 2) intensityClass = 'intensity-2';
-            if (dayLogs.length >= 3) intensityClass = 'intensity-3';
-            cell.className = `calendar-day ${intensityClass} font-bold`;
-        }
-        if (day === now.getDate() && month === now.getMonth()) {
-            cell.classList.add('ring-2', 'ring-stone-800', 'ring-offset-2');
-        }
-        calendarGrid.appendChild(cell);
-    }
+function renderReactions(reactions) {
+    document.getElementById('reactionCounts').innerHTML = Object.entries(reactions).map(([k,v]) => `<span>${k} ${v}</span>`).join(' • ');
 }
 
-init();
+function renderComments(comments) {
+    const div = document.getElementById('commentsList');
+    div.innerHTML = comments.length ? comments.map(c => `
+        <div class="flex gap-3 text-sm">
+            <img src="${c.avatar}" class="w-8 h-8 rounded-full">
+            <div>
+                <div class="flex gap-2 items-baseline">
+                    <span class="font-bold text-gray-900">${c.user}</span>
+                    <span class="text-xs text-gray-400">${c.time}</span>
+                </div>
+                <p class="text-gray-600">${c.text}</p>
+            </div>
+        </div>
+    `).join('') : '<p class="text-gray-400 text-xs">No comments yet.</p>';
+}
 
+document.getElementById('closeDashboard').addEventListener('click', () => {
+    const m = document.getElementById('userDashboardModal');
+    m.classList.remove('opacity-100');
+    setTimeout(() => { m.classList.add('hidden'); m.classList.remove('flex'); }, 200);
+});
+
+document.getElementById('closeLoginModal').addEventListener('click', () => {
+     document.getElementById('loginModal').classList.add('hidden');
+     document.getElementById('loginModal').classList.remove('flex');
+});
+
+// Notifications (Static Mock for visual demo)
+const sampleNotifications = [
+    { id: 1, type: 'reminder', message: 'just reminded you to log!', emoji: '💩', time: '2m ago', unread: true },
+    { id: 2, type: 'reactions', message: 'You received 20 reactions!', emoji: '🔥', time: '15m ago', unread: true }
+];
+
+function renderNotifications() {
+    const container = document.getElementById('notificationList');
+    const unreadCount = sampleNotifications.filter(n => n.unread).length;
+    
+    document.getElementById('notificationBadge').textContent = unreadCount;
+    document.getElementById('notificationBadge').classList.toggle('hidden', unreadCount === 0);
+    
+    container.innerHTML = sampleNotifications.map(n => `
+        <div class="p-3 border-b border-amber-50 hover:bg-amber-50/50 transition-colors cursor-pointer ${n.unread ? 'bg-orange-50/50' : ''}">
+            <div class="flex gap-3 items-start">
+                <div class="w-10 h-10 rounded-full bg-gradient-to-br from-orange-400 to-amber-500 flex items-center justify-center text-xl">${n.emoji}</div>
+                <div class="flex-1 min-w-0">
+                    <p class="text-sm text-amber-900"><span class="text-amber-700">${n.message}</span></p>
+                    <p class="text-xs text-amber-400 mt-1 font-medium">${n.time}</p>
+                </div>
+            </div>
+        </div>
+    `).join('');
+}
+
+document.getElementById('notificationBtn').addEventListener('click', (e) => {
+    e.stopPropagation();
+    document.getElementById('notificationDropdown').classList.toggle('hidden');
+});
+document.addEventListener('click', (e) => {
+    const dropdown = document.getElementById('notificationDropdown');
+    const btn = document.getElementById('notificationBtn');
+    if (!dropdown.contains(e.target) && !btn.contains(e.target)) dropdown.classList.add('hidden');
+});
+
+// Init
+loadLocalData(); // Initial load (will be overwritten by Firestore if logged in)
+renderNotifications();

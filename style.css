@@ -1,16 +1,141 @@
-body { font-family: 'DynaPuff', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background-color: #fafaf9; }
-input[type=range] { -webkit-appearance: none; width: 100%; background: transparent; }
-input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; height: 28px; width: 28px; border-radius: 50%; background: #44403c; cursor: pointer; margin-top: -12px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); transition: background 0.2s, transform 0.2s; }
-input[type=range]::-webkit-slider-thumb:hover { transform: scale(1.1); }
-input[type=range]::-webkit-slider-runnable-track { width: 100%; height: 4px; cursor: pointer; background: #e7e5e4; border-radius: 2px; }
-input[type=range]:focus { outline: none; }
-@keyframes pop { 0% { transform: scale(1); } 50% { transform: scale(1.2); } 100% { transform: scale(1); } }
-.emoji-pop { animation: pop 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
-.calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; }
-.calendar-day { aspect-ratio: 1; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 0.75rem; color: #78716c; position: relative; transition: all 0.2s; }
-.intensity-0 { background-color: #f5f5f4; } 
-.intensity-1 { background-color: #ffedd5; color: #9a3412; } 
-.intensity-2 { background-color: #fb923c; color: #fff; } 
-.intensity-3 { background-color: #ea580c; color: white; } 
-.no-select { user-select: none; -webkit-user-select: none; }
-.hidden { display: none !important; }
+@import url('https://fonts.googleapis.com/css2?family=Fredoka:wght@300;400;500;600;700&display=swap');
+
+body {
+    font-family: 'Fredoka', sans-serif;
+    -webkit-font-smoothing: antialiased;
+}
+
+/* slider thumbs */
+.slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 40px;
+    height: 40px;
+    background: #fcd34d;
+    cursor: pointer;
+    border-radius: 50%;
+    box-shadow: 0 4px 0px #d97706;
+    border: 4px solid #fff;
+    transition: transform 0.1s;
+}
+.slider::-webkit-slider-thumb:hover {
+    transform: scale(1.1);
+}
+.slider::-moz-range-thumb {
+    width: 40px;
+    height: 40px;
+    background: #fcd34d;
+    cursor: pointer;
+    border-radius: 50%;
+    box-shadow: 0 4px 0px #d97706;
+    border: 4px solid #fff;
+}
+
+/* heat map */
+.heat-cell {
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    border-radius: 8px;
+}
+.heat-cell:hover {
+    transform: scale(1.2) rotate(5deg);
+    z-index: 10;
+}
+
+.yearly-cell {
+    width: 10px;
+    height: 10px;
+    border-radius: 3px;
+    transition: all 0.2s;
+}
+.yearly-cell:hover {
+    transform: scale(1.5);
+    z-index: 10;
+}
+
+/* tooltip */
+.tooltip {
+    visibility: hidden;
+    opacity: 0;
+    transition: all 0.2s ease;
+    transform: translateY(10px) translateX(-50%);
+}
+.tooltip-trigger:hover .tooltip {
+    visibility: visible;
+    opacity: 1;
+    transform: translateY(0) translateX(-50%);
+}
+
+/* tabs & buttons */
+.tab-active {
+    background-color: #f59e0b;
+    color: white;
+    box-shadow: 0 4px 0px #b45309;
+    transform: translateY(-2px);
+}
+.tab-active:active {
+    box-shadow: 0 0 0 #b45309;
+    transform: translateY(2px);
+}
+
+.fun-btn {
+    transition: all 0.1s;
+    box-shadow: 0 4px 0 #e5e7eb;
+}
+.fun-btn:active {
+    transform: translateY(4px);
+    box-shadow: 0 0 0 #e5e7eb;
+}
+
+.primary-btn {
+    box-shadow: 0 6px 0 #c2410c;
+    transition: all 0.1s;
+}
+.primary-btn:active {
+    transform: translateY(6px);
+    box-shadow: 0 0 0 #c2410c;
+}
+
+/* reactions */
+.reaction-btn:hover {
+    transform: scale(1.2) rotate(-10deg);
+}
+.reaction-btn.active {
+    transform: scale(1.1);
+    filter: drop-shadow(0 0 8px rgba(249, 115, 22, 0.4));
+}
+
+/* notifications */
+#notificationDropdown {
+    animation: slideDown 0.2s ease-out;
+}
+@keyframes slideDown {
+    from { opacity: 0; transform: translateY(-10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* pages */
+.page {
+    display: none;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+.page.active {
+    display: block;
+    opacity: 1;
+}
+
+/* scrollbar */
+::-webkit-scrollbar {
+    width: 10px;
+}
+::-webkit-scrollbar-track {
+    background: #fffbeb;
+}
+::-webkit-scrollbar-thumb {
+    background: #fcd34d;
+    border-radius: 10px;
+    border: 2px solid #fffbeb;
+}
+::-webkit-scrollbar-thumb:hover {
+    background: #fbbf24;
+}
