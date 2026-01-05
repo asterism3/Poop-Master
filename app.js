@@ -43,6 +43,12 @@ let unsubscribeNotifications = null;
 let localLogs = [];
 let allUsers = [];
 
+// Custom profile data (for guests and custom overrides)
+let customProfile = {
+    name: null,
+    avatar: null
+};
+
 // Data Constants
 const poopTypes = {
     1: { emoji: '🍇', label: 'Type 1', desc: 'Hard lumps', color: '#78350f' },
@@ -62,6 +68,243 @@ let currentLeaderboardTab = 'today';
 let selectedUserId = null;
 let lineChartInstance = null;
 let pieChartInstance = null;
+
+// ============================================
+// PROFILE MANAGEMENT SYSTEM
+// ============================================
+
+// Load custom profile from localStorage
+function loadCustomProfile() {
+    const saved = localStorage.getItem('customProfile');
+    if (saved) {
+        customProfile = JSON.parse(saved);
+    }
+}
+
+// Save custom profile to localStorage
+function saveCustomProfile() {
+    localStorage.setItem('customProfile', JSON.stringify(customProfile));
+}
+
+// Get the effective display name
+function getDisplayName() {
+    if (customProfile.name) return customProfile.name;
+    if (currentUser?.displayName) return currentUser.displayName;
+    return 'Guest';
+}
+
+// Get the effective avatar URL
+function getAvatarUrl() {
+    if (customProfile.avatar) return customProfile.avatar;
+    if (currentUser?.photoURL) return currentUser.photoURL;
+    const name = getDisplayName();
+    return `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=fde68a&color=92400e`;
+}
+
+// Update all UI elements that show user info
+function updateAllUserDisplays() {
+    const name = getDisplayName();
+    const avatar = getAvatarUrl();
+    
+    // Header - Guest section
+    const guestAvatar = document.getElementById('guestAvatar');
+    const guestName = document.getElementById('guestName');
+    if (guestAvatar) guestAvatar.src = avatar;
+    if (guestName) guestName.textContent = name;
+    
+    // Header - User section
+    const userAvatar = document.getElementById('userAvatar');
+    const userName = document.getElementById('userName');
+    if (userAvatar) userAvatar.src = avatar;
+    if (userName) userName.textContent = name;
+    
+    // Side panel
+    const sidePanelAvatar = document.getElementById('sidePanelAvatar');
+    const sidePanelName = document.getElementById('sidePanelName');
+    if (sidePanelAvatar) sidePanelAvatar.src = avatar;
+    if (sidePanelName) sidePanelName.textContent = name;
+    
+    // Profile page
+    const profileAvatar = document.getElementById('profileAvatar');
+    const profileName = document.getElementById('profileName');
+    if (profileAvatar) profileAvatar.src = avatar;
+    if (profileName) profileName.textContent = name;
+}
+
+// Initialize profile on load
+loadCustomProfile();
+
+// ============================================
+// EDIT PROFILE MODAL
+// ============================================
+const editProfileModal = document.getElementById('editProfileModal');
+const closeEditProfile = document.getElementById('closeEditProfile');
+const editNameInput = document.getElementById('editNameInput');
+const editAvatarPreview = document.getElementById('editAvatarPreview');
+const saveProfileBtn = document.getElementById('saveProfileBtn');
+const uploadAvatarBtn = document.getElementById('uploadAvatarBtn');
+const urlAvatarBtn = document.getElementById('urlAvatarBtn');
+const avatarUrlInputContainer = document.getElementById('avatarUrlInputContainer');
+const avatarUrlInput = document.getElementById('avatarUrlInput');
+const applyUrlBtn = document.getElementById('applyUrlBtn');
+const avatarFileInput = document.getElementById('avatarFileInput');
+const profileAvatarContainer = document.getElementById('profileAvatarContainer');
+const editNameBtn = document.getElementById('editNameBtn');
+
+let tempAvatarData = null;
+
+function openEditProfileModal() {
+    editProfileModal.classList.remove('hidden');
+    editProfileModal.classList.add('flex');
+    
+    // Populate with current values
+    editNameInput.value = getDisplayName();
+    editAvatarPreview.src = getAvatarUrl();
+    tempAvatarData = null;
+    avatarUrlInputContainer.classList.add('hidden');
+    avatarUrlInput.value = '';
+}
+
+function closeEditProfileModal() {
+    editProfileModal.classList.add('hidden');
+    editProfileModal.classList.remove('flex');
+    tempAvatarData = null;
+}
+
+// Open modal triggers
+if (profileAvatarContainer) {
+    profileAvatarContainer.addEventListener('click', openEditProfileModal);
+}
+
+if (editNameBtn) {
+    editNameBtn.addEventListener('click', openEditProfileModal);
+}
+
+// Close modal
+if (closeEditProfile) {
+    closeEditProfile.addEventListener('click', closeEditProfileModal);
+}
+
+// Click outside to close
+editProfileModal?.addEventListener('click', (e) => {
+    if (e.target === editProfileModal) {
+        closeEditProfileModal();
+    }
+});
+
+// Upload button - trigger file input
+if (uploadAvatarBtn) {
+    uploadAvatarBtn.addEventListener('click', () => {
+        avatarFileInput.click();
+    });
+}
+
+// Handle file selection
+if (avatarFileInput) {
+    avatarFileInput.addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if (file) {
+            // Validate file type
+            if (!file.type.startsWith('image/')) {
+                showToast('Please select an image file 📷');
+                return;
+            }
+            
+            // Validate file size (max 2MB)
+            if (file.size > 2 * 1024 * 1024) {
+                showToast('Image too large! Max 2MB 📏');
+                return;
+            }
+            
+            // Read and convert to base64
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                tempAvatarData = event.target.result;
+                editAvatarPreview.src = tempAvatarData;
+                showToast('Image loaded! 📷');
+            };
+            reader.readAsDataURL(file);
+        }
+    });
+}
+
+// URL button - toggle URL input
+if (urlAvatarBtn) {
+    urlAvatarBtn.addEventListener('click', () => {
+        avatarUrlInputContainer.classList.toggle('hidden');
+    });
+}
+
+// Apply URL button
+if (applyUrlBtn) {
+    applyUrlBtn.addEventListener('click', () => {
+        const url = avatarUrlInput.value.trim();
+        if (url) {
+            // Basic URL validation
+            try {
+                new URL(url);
+                tempAvatarData = url;
+                editAvatarPreview.src = url;
+                avatarUrlInputContainer.classList.add('hidden');
+                showToast('Image URL applied! 🔗');
+            } catch {
+                showToast('Invalid URL! 🚫');
+            }
+        }
+    });
+}
+
+// Handle image load error on preview
+if (editAvatarPreview) {
+    editAvatarPreview.addEventListener('error', () => {
+        editAvatarPreview.src = getAvatarUrl();
+        showToast('Failed to load image ❌');
+        tempAvatarData = null;
+    });
+}
+
+// Save profile
+if (saveProfileBtn) {
+    saveProfileBtn.addEventListener('click', async () => {
+        const newName = editNameInput.value.trim();
+        
+        if (!newName) {
+            showToast('Please enter a name! 📝');
+            return;
+        }
+        
+        // Update custom profile
+        customProfile.name = newName;
+        if (tempAvatarData) {
+            customProfile.avatar = tempAvatarData;
+        }
+        
+        // Save to localStorage
+        saveCustomProfile();
+        
+        // If logged in, also update Firestore
+        if (currentUser) {
+            try {
+                const userRef = doc(db, "users", currentUser.uid);
+                await updateDoc(userRef, {
+                    customName: customProfile.name,
+                    customAvatar: customProfile.avatar || null,
+                    lastActive: serverTimestamp()
+                });
+            } catch (error) {
+                console.error("Error updating profile in Firestore:", error);
+            }
+        }
+        
+        // Update all displays
+        updateAllUserDisplays();
+        
+        // Close modal
+        closeEditProfileModal();
+        
+        showToast('Profile updated! ✨');
+    });
+}
 
 // ============================================
 // COOLDOWN SYSTEM
@@ -160,6 +403,9 @@ const loginUser = () => {
 const logoutUser = () => {
     signOut(auth).then(() => {
         console.log("Signed out");
+        // Clear custom profile on logout if desired (optional)
+        // customProfile = { name: null, avatar: null };
+        // saveCustomProfile();
     });
 };
 
@@ -173,6 +419,15 @@ if(logoutBtn) logoutBtn.addEventListener('click', logoutUser);
 async function createOrUpdateUserProfile(user) {
     const userRef = doc(db, "users", user.uid);
     const userSnap = await getDoc(userRef);
+    
+    // Check if there's custom profile data stored
+    if (userSnap.exists()) {
+        const userData = userSnap.data();
+        // Load custom name/avatar from Firestore if exists
+        if (userData.customName) customProfile.name = userData.customName;
+        if (userData.customAvatar) customProfile.avatar = userData.customAvatar;
+        saveCustomProfile();
+    }
     
     const userData = {
         uid: user.uid,
@@ -244,13 +499,19 @@ onAuthStateChanged(auth, async (user) => {
         document.getElementById('guestSection').classList.add('hidden');
         document.getElementById('userSection').classList.remove('hidden');
         document.getElementById('notificationSection').classList.remove('hidden');
-        document.getElementById('userAvatar').src = user.photoURL;
-        document.getElementById('userName').textContent = user.displayName || 'User';
         document.getElementById('loginModal').classList.add('hidden');
         document.getElementById('loginModal').classList.remove('flex');
         
-        // Update side panel user info
-        if (typeof updateSidePanelUser === 'function') updateSidePanelUser();
+        // Update side panel email
+        const sidePanelEmail = document.getElementById('sidePanelEmail');
+        if (sidePanelEmail) sidePanelEmail.textContent = user.email || '';
+        
+        // Update profile page email
+        const profileEmail = document.getElementById('profileEmail');
+        if (profileEmail) profileEmail.textContent = user.email || '';
+        
+        // Update all user displays with custom profile
+        updateAllUserDisplays();
         
         setupRealtimeListener(user.uid);
         setupNotificationListener(user.uid);
@@ -265,6 +526,17 @@ onAuthStateChanged(auth, async (user) => {
         document.getElementById('guestSection').classList.remove('hidden');
         document.getElementById('userSection').classList.add('hidden');
         document.getElementById('notificationSection').classList.add('hidden');
+        
+        // Update side panel for guest
+        const sidePanelEmail = document.getElementById('sidePanelEmail');
+        if (sidePanelEmail) sidePanelEmail.textContent = 'Not logged in';
+        
+        // Update profile email
+        const profileEmail = document.getElementById('profileEmail');
+        if (profileEmail) profileEmail.textContent = 'Not logged in';
+        
+        // Update all displays
+        updateAllUserDisplays();
         
         loadLocalData();
     }
@@ -316,8 +588,8 @@ async function sendNotification(toUid, type, message, emoji) {
     await addDoc(collection(db, "notifications"), {
         toUid: toUid,
         fromUid: currentUser.uid,
-        fromName: currentUser.displayName,
-        fromAvatar: currentUser.photoURL,
+        fromName: getDisplayName(),
+        fromAvatar: getAvatarUrl(),
         type: type,
         message: message,
         emoji: emoji,
@@ -433,23 +705,18 @@ document.getElementById('postComment').addEventListener('click', async () => {
         return;
     }
     
-    if (!currentUser) {
-        showToast('Please log in to comment! 🔐');
-        return;
-    }
-    
     if (!selectedUserId) {
         showToast('No user selected');
         return;
     }
     
     try {
-        // Add comment to Firestore
+        // Add comment to Firestore (works for guests too with anonymous data)
         await addDoc(collection(db, "comments"), {
             toUid: selectedUserId,
-            fromUid: currentUser.uid,
-            fromName: currentUser.displayName,
-            fromAvatar: currentUser.photoURL,
+            fromUid: currentUser?.uid || 'guest_' + Date.now(),
+            fromName: getDisplayName(),
+            fromAvatar: getAvatarUrl(),
             text: text,
             createdAt: serverTimestamp()
         });
@@ -457,8 +724,8 @@ document.getElementById('postComment').addEventListener('click', async () => {
         // Clear input
         input.value = '';
         
-        // Send notification (if not commenting on own profile)
-        if (selectedUserId !== currentUser.uid) {
+        // Send notification (if not commenting on own profile and logged in)
+        if (currentUser && selectedUserId !== currentUser.uid) {
             const truncatedText = text.length > 30 ? text.substring(0, 30) + '...' : text;
             await sendNotification(selectedUserId, 'comment', `commented: "${truncatedText}"`, '💬');
         }
@@ -729,7 +996,11 @@ function renderLeaderboard() {
             count = stats.yearLogs || 0;
         }
         
-        return { ...u, count };
+        // Use custom name/avatar if available
+        const displayName = u.customName || u.name || 'Anonymous';
+        const displayAvatar = u.customAvatar || u.avatar || 'https://ui-avatars.com/api/?name=User';
+        
+        return { ...u, count, displayName, displayAvatar };
     }).sort((a, b) => b.count - a.count);
 
     const container = document.getElementById('leaderboardList');
@@ -756,9 +1027,9 @@ function renderLeaderboard() {
         return `
             <div class="fun-btn flex items-center gap-4 ${bgClass} p-4 rounded-3xl border-2 cursor-pointer hover:border-amber-300 transition-colors" onclick="openUserDashboard('${u.id}')">
                 <div class="w-8 text-center text-2xl">${rank}</div>
-                <img src="${u.avatar || 'https://ui-avatars.com/api/?name=User'}" class="w-12 h-12 rounded-full bg-amber-50 border-2 border-amber-100">
+                <img src="${u.displayAvatar}" class="w-12 h-12 rounded-full bg-amber-50 border-2 border-amber-100 object-cover">
                 <div class="flex-1">
-                    <div class="font-black text-amber-900 text-base">${u.name || 'Anonymous'} ${isMe ? '(You)' : ''}${privateBadge}</div>
+                    <div class="font-black text-amber-900 text-base">${u.displayName} ${isMe ? '(You)' : ''}${privateBadge}</div>
                     <div class="text-xs font-bold text-amber-400">${totalReactions} reactions</div>
                 </div>
                 <div class="text-right">
@@ -795,8 +1066,12 @@ window.openUserDashboard = async (uid) => {
     
     selectedUserId = uid;
 
-    document.getElementById('dashboardName').textContent = user.name || 'Anonymous';
-    document.getElementById('dashboardAvatar').src = user.avatar || 'https://ui-avatars.com/api/?name=User';
+    // Use custom name/avatar if available
+    const displayName = user.customName || user.name || 'Anonymous';
+    const displayAvatar = user.customAvatar || user.avatar || 'https://ui-avatars.com/api/?name=User';
+
+    document.getElementById('dashboardName').textContent = displayName;
+    document.getElementById('dashboardAvatar').src = displayAvatar;
     document.getElementById('dashTotalPoops').textContent = user.stats?.totalLogs || 0;
     document.getElementById('dashStreak').textContent = calculateStreak(user.stats?.lastLogDate);
     
@@ -1070,6 +1345,7 @@ document.getElementById('markAllRead').addEventListener('click', async () => {
 // Init
 loadLocalData();
 initCooldown();
+updateAllUserDisplays();
 
 // ====================================
 // SIDE PANEL MENU
@@ -1098,14 +1374,13 @@ function updateSidePanelUser() {
     const sidePanelEmail = document.getElementById('sidePanelEmail');
     const menuLogout = document.getElementById('menuLogout');
     
+    sidePanelAvatar.src = getAvatarUrl();
+    sidePanelName.textContent = getDisplayName();
+    
     if (currentUser) {
-        sidePanelAvatar.src = currentUser.photoURL || 'https://ui-avatars.com/api/?name=User&background=fde68a&color=92400e';
-        sidePanelName.textContent = currentUser.displayName || 'User';
         sidePanelEmail.textContent = currentUser.email || '';
         menuLogout.style.display = 'flex';
     } else {
-        sidePanelAvatar.src = 'https://ui-avatars.com/api/?name=Guest&background=fde68a&color=92400e';
-        sidePanelName.textContent = 'Guest';
         sidePanelEmail.textContent = 'Not logged in';
         menuLogout.style.display = 'none';
     }
@@ -1190,6 +1465,7 @@ document.getElementById('menuProfile').addEventListener('click', () => {
 
 document.getElementById('menuSettings').addEventListener('click', () => {
     navigateToPage('settingsPage');
+    loadPrivacySettings();
 });
 
 document.getElementById('menuTracker').addEventListener('click', () => {
@@ -1335,9 +1611,11 @@ async function renderProfilePage() {
     const profileReactions = document.getElementById('profileReactions');
     const profilePrivacyBadge = document.getElementById('profilePrivacyBadge');
     
+    // Use custom profile data
+    profileAvatar.src = getAvatarUrl();
+    profileName.textContent = getDisplayName();
+    
     if (currentUser) {
-        profileAvatar.src = currentUser.photoURL || 'https://ui-avatars.com/api/?name=User';
-        profileName.textContent = currentUser.displayName || 'User';
         profileEmail.textContent = currentUser.email || '';
         
         // Fetch user data from Firebase
@@ -1384,8 +1662,6 @@ async function renderProfilePage() {
             }
         }
     } else {
-        profileAvatar.src = 'https://ui-avatars.com/api/?name=Guest&background=fde68a&color=92400e';
-        profileName.textContent = 'Guest';
         profileEmail.textContent = 'Sign in to save your data';
         profileJoinDate.textContent = '-';
         profileTotalLogs.textContent = localLogs.length;
@@ -1402,7 +1678,7 @@ document.getElementById('exportDataBtn').addEventListener('click', () => {
     const data = {
         logs: localLogs,
         exportDate: new Date().toISOString(),
-        user: currentUser ? { name: currentUser.displayName, email: currentUser.email } : { name: 'Guest' }
+        user: currentUser ? { name: getDisplayName(), email: currentUser.email } : { name: getDisplayName() }
     };
     
     const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
@@ -1526,12 +1802,6 @@ privateProfileToggle.addEventListener('change', (e) => {
 
 showOnLeaderboardToggle.addEventListener('change', (e) => {
     saveLeaderboardSetting(e.target.checked);
-});
-
-// Load settings when navigating to settings page
-const originalMenuSettingsHandler = document.getElementById('menuSettings').onclick;
-document.getElementById('menuSettings').addEventListener('click', () => {
-    loadPrivacySettings();
 });
 
 // ====================================
