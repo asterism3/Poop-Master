@@ -150,6 +150,7 @@ const applyUrlBtn = document.getElementById('applyUrlBtn');
 const avatarFileInput = document.getElementById('avatarFileInput');
 const profileAvatarContainer = document.getElementById('profileAvatarContainer');
 const editNameBtn = document.getElementById('editNameBtn');
+const editProfileBtn = document.getElementById('editProfileBtn');
 
 let tempAvatarData = null;
 
@@ -171,13 +172,30 @@ function closeEditProfileModal() {
     tempAvatarData = null;
 }
 
-// Open modal triggers
+// Open modal triggers - works for both guests and logged-in users
 if (profileAvatarContainer) {
-    profileAvatarContainer.addEventListener('click', openEditProfileModal);
+    profileAvatarContainer.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        openEditProfileModal();
+    });
 }
 
 if (editNameBtn) {
-    editNameBtn.addEventListener('click', openEditProfileModal);
+    editNameBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        openEditProfileModal();
+    });
+}
+
+// Main Edit Profile button (visible for both guests and logged-in users)
+if (editProfileBtn) {
+    editProfileBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        openEditProfileModal();
+    });
 }
 
 // Close modal
