@@ -370,6 +370,132 @@ function formatTimeAgo(date) {
 }
 
 // ====================================
+// COMMENTS - Firebase Implementation
+// ====================================
+
+async function loadComments(userId) {
+    const container = document.getElementById('commentsList');
+    
+    try {
+        const q = query(
+            collection(db, "comments"),
+            where("toUid", "==", userId),
+            orderBy("createdAt", "desc"),
+            limit(20)
+        );
+        
+        const snapshot = await getDocs(q);
+        
+        if (snapshot.empty) {
+            container.innerHTML = '<p class="text-center text-amber-300 text-sm py-4">No comments yet. Be the first!</p>';
+            return;
+        }
+        
+        container.innerHTML = snapshot.docs.map(docSnap => {
+            const c = docSnap.data();
+            const time = c.createdAt?.toDate ? formatTimeAgo(c.createdAt.toDate()) : 'just now';
+            const isOwner = currentUser && c.fromUid === currentUser.uid;
+            
+            return `
+                <div class="flex gap-3 p-3 bg-amber-50 rounded-xl group" data-comment-id="${docSnap.id}">
+                    <img src="${c.fromAvatar || 'https://ui-avatars.com/api/?name=User'}" class="w-8 h-8 rounded-full flex-shrink-0">
+                    <div class="flex-1 min-w-0">
+                        <div class="flex items-center gap-2 flex-wrap">
+                            <span class="font-bold text-amber-900 text-sm">${c.fromName || 'Anonymous'}</span>
+                            <span class="text-xs text-amber-300">${time}</span>
+                            ${isOwner ? `<button onclick="deleteComment('${docSnap.id}')" class="text-xs text-red-400 hover:text-red-600 opacity-0 group-hover:opacity-100 transition-opacity">Delete</button>` : ''}
+                        </div>
+                        <p class="text-sm text-amber-700 break-words">${escapeHtml(c.text)}</p>
+                    </div>
+                </div>
+            `;
+        }).join('');
+    } catch (error) {
+        console.error("Error loading comments:", error);
+        container.innerHTML = '<p class="text-center text-red-400 text-sm py-4">Failed to load comments</p>';
+    }
+}
+
+// Escape HTML to prevent XSS
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+// Post comment handler
+document.getElementById('postComment').addEventListener('click', async () => {
+    const input = document.getElementById('commentInput');
+    const text = input.value.trim();
+    
+    if (!text) {
+        showToast('Please enter a comment 📝');
+        return;
+    }
+    
+    if (!currentUser) {
+        showToast('Please log in to comment! 🔐');
+        return;
+    }
+    
+    if (!selectedUserId) {
+        showToast('No user selected');
+        return;
+    }
+    
+    try {
+        // Add comment to Firestore
+        await addDoc(collection(db, "comments"), {
+            toUid: selectedUserId,
+            fromUid: currentUser.uid,
+            fromName: currentUser.displayName,
+            fromAvatar: currentUser.photoURL,
+            text: text,
+            createdAt: serverTimestamp()
+        });
+        
+        // Clear input
+        input.value = '';
+        
+        // Send notification (if not commenting on own profile)
+        if (selectedUserId !== currentUser.uid) {
+            const truncatedText = text.length > 30 ? text.substring(0, 30) + '...' : text;
+            await sendNotification(selectedUserId, 'comment', `commented: "${truncatedText}"`, '💬');
+        }
+        
+        // Refresh comments list
+        await loadComments(selectedUserId);
+        
+        showToast('Comment posted! 💬');
+        
+    } catch (error) {
+        console.error("Error posting comment:", error);
+        showToast('Failed to post comment ❌');
+    }
+});
+
+// Allow Enter key to post comment
+document.getElementById('commentInput').addEventListener('keypress', (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        document.getElementById('postComment').click();
+    }
+});
+
+// Delete comment function
+window.deleteComment = async (commentId) => {
+    if (!confirm('Delete this comment?')) return;
+    
+    try {
+        await deleteDoc(doc(db, "comments", commentId));
+        await loadComments(selectedUserId);
+        showToast('Comment deleted 🗑️');
+    } catch (error) {
+        console.error("Error deleting comment:", error);
+        showToast('Failed to delete comment ❌');
+    }
+};
+// ====================================
 // REACTIONS - Real Firebase Implementation
 // ====================================
 async function addReaction(targetUserId, emoji) {
@@ -758,6 +884,7 @@ window.openUserDashboard = async (uid) => {
     });
 
     renderReactionsUI(user.reactions || {});
+    await loadComments(uid);
     
     const m = document.getElementById('userDashboardModal');
     m.classList.remove('hidden');
@@ -789,12 +916,34 @@ function renderReactionsUI(reactions) {
 document.querySelectorAll('.reaction-btn').forEach(btn => {
     btn.addEventListener('click', async () => {
         const emoji = btn.dataset.reaction;
-        if (selectedUserId) {
+        
+        if (!currentUser) {
+            showToast('Please log in to react! 🔐');
+            return;
+        }
+        
+        if (!selectedUserId) {
+            return;
+        }
+        
+        if (selectedUserId === currentUser.uid) {
+            showToast("You can't react to yourself! 😅");
+            return;
+        }
+        
+        try {
             await addReaction(selectedUserId, emoji);
             const reactions = await fetchUserReactions(selectedUserId);
             renderReactionsUI(reactions);
+            
+            // Visual feedback
             btn.classList.add('active');
             setTimeout(() => btn.classList.remove('active'), 500);
+            
+            showToast(`Reacted with ${emoji}!`);
+        } catch (error) {
+            console.error("Error adding reaction:", error);
+            showToast('Failed to add reaction ❌');
         }
     });
 });
