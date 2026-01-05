@@ -150,6 +150,7 @@ const applyUrlBtn = document.getElementById('applyUrlBtn');
 const avatarFileInput = document.getElementById('avatarFileInput');
 const profileAvatarContainer = document.getElementById('profileAvatarContainer');
 const editNameBtn = document.getElementById('editNameBtn');
+const editProfileBtn = document.getElementById('editProfileBtn');
 
 let tempAvatarData = null;
 
@@ -178,6 +179,11 @@ if (profileAvatarContainer) {
 
 if (editNameBtn) {
     editNameBtn.addEventListener('click', openEditProfileModal);
+}
+
+// Main Edit Profile button (visible for both guests and logged-in users)
+if (editProfileBtn) {
+    editProfileBtn.addEventListener('click', openEditProfileModal);
 }
 
 // Close modal
